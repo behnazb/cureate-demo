@@ -95,7 +95,7 @@ export default function ProductDetailPage({
             <span className="mx-1">/</span>
             <a href="#" className="hover:underline" style={{ color: COLORS.medTeal }}>Nutrition &amp; Granola Bars</a>
           </span>
-          <ViewCartButton vendorId={vendor.id} />
+          <ViewCartButton />
         </div>
 
         {/* Main grid */}
