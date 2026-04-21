@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Lato } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import { CartProvider } from "@/lib/cartContext";
 import CartDrawer from "@/components/CartDrawer";
 import MobileNav from "@/components/MobileNav";
@@ -36,6 +37,7 @@ export default function RootLayout({
           </div>
           <CartDrawer />
         </CartProvider>
+        <Analytics />
       </body>
     </html>
   );
