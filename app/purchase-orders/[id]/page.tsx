@@ -110,11 +110,11 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
             <span className="font-bold text-[#1f1f1f] truncate">{po.id}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {/* Desktop: full "View Draft PO" button — draft only */}
+            {/* View Draft PO button — draft only, both mobile and desktop */}
             {isDraft && (
               <button
                 onClick={() => { syncItemsFromPO(po.id); setDrawerOpen(true) }}
-                className="hidden md:flex bg-[#28ba93] hover:bg-[#22a882] transition-colors items-center gap-2 rounded-full px-4 h-[38px] text-white font-bold text-[13px] whitespace-nowrap"
+                className="no-min-h flex bg-[#28ba93] hover:bg-[#22a882] transition-colors items-center gap-2 rounded-full px-4 h-[38px] text-white font-bold text-[13px] whitespace-nowrap"
               >
                 <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="shrink-0">
                   <path d="M2 3h2l2.4 9.6A1 1 0 007.36 14h7.28a1 1 0 00.96-.72L17 7H5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

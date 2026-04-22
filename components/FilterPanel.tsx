@@ -55,7 +55,7 @@ export default function FilterPanel({
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-black/40 z-40"
+            className="fixed inset-0 bg-black/40 z-[70]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -64,7 +64,7 @@ export default function FilterPanel({
 
           {/* Panel — full screen on mobile, left slide-in on desktop */}
           <motion.div
-            className="fixed z-50 bg-white overflow-hidden flex flex-col inset-0 md:inset-y-0 md:left-0 md:right-auto md:w-[380px] md:shadow-[4px_0_24px_rgba(0,0,0,0.1)]"
+            className="fixed z-[80] bg-white overflow-hidden flex flex-col inset-0 md:inset-y-0 md:left-0 md:right-auto md:w-[380px] md:shadow-[4px_0_24px_rgba(0,0,0,0.1)]"
             initial={isMobile ? { y: '100%' } : { x: '-100%' }}
             animate={{ y: 0, x: 0 }}
             exit={isMobile ? { y: '100%' } : { x: '-100%' }}

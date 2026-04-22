@@ -47,7 +47,7 @@ export default function FilterDropdown({
   }
 
   const handleOpen = () => {
-    if (!open && triggerRef.current && window.innerWidth < 768) {
+    if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
       setDropdownStyle({
         position: 'fixed',

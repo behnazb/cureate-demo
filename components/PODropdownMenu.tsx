@@ -63,7 +63,7 @@ export default function PODropdownMenu({ items }: { items: PODropdownItem[] }) {
     <div ref={ref} className="relative">
       <button
         onClick={e => { e.stopPropagation(); setOpen(!open) }}
-        className="w-7 h-7 rounded-full bg-[#f0f0f0] hover:bg-[#e0e0e0] flex items-center justify-center text-[#777] transition-colors text-[14px] tracking-wider"
+        className="no-min-h w-7 h-7 rounded-full hover:bg-[#f0f0f0] flex items-center justify-center text-[#777] transition-colors text-[14px] tracking-wider"
       >
         ···
       </button>
