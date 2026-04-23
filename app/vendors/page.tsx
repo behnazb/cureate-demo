@@ -80,14 +80,14 @@ export default function VendorsPage() {
                       {/* Metadata — dot-separated, no pills */}
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {vendor.categories?.[0] && (
-                          <span className="text-[11px] font-medium text-[#666]">
+                          <span className="text-[13px] font-medium text-[#666]">
                             {vendor.categories[0]}
                           </span>
                         )}
                         {vendor.certifications?.map((cert) => (
                           <React.Fragment key={cert}>
-                            <span className="text-[11px] text-[#ccc]">·</span>
-                            <span className="text-[11px] font-medium text-[#666]">
+                            <span className="text-[13px] text-[#ccc]">·</span>
+                            <span className="text-[13px] font-medium text-[#666]">
                               {shortenCert(cert)}
                             </span>
                           </React.Fragment>
