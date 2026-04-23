@@ -49,7 +49,7 @@ function InstagramIcon({ size = 16 }: { size?: number }) {
 function TwitterIcon({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <path d="M2 12.5c1.5 0 4-1 5-3 1.5 3 5-1 3.5-3.5C11.5 4 10 3.5 9 4l1-2.5C5 2 3 6 3 6S2.5 4 1 4c1.5 2 1 3.5 0 4.5 1.5 0 2.5-.5 3 0C3 10.5 2 12 2 12.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+      <path d="M2 2.5h4l2.5 3.5L11 2.5h1.5L9 7l4.5 6.5H9.5L7 10 4.5 13.5H3L6.5 8.5 2 2.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" strokeLinecap="round"/>
     </svg>
   );
 }
