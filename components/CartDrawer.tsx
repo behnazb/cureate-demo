@@ -7,6 +7,7 @@ import { useCart } from '@/lib/cartContext'
 import { vendors } from '@/lib/data'
 import { purchaseOrders as poData } from '@/lib/purchaseOrdersData'
 import AddToCartButton from '@/components/AddToCartButton'
+import ProductCard from '@/components/ProductCard'
 
 const COLORS = {
   primaryTeal:  '#28ba93',
@@ -146,6 +147,7 @@ export default function CartDrawer() {
   const navigateToDraftOnCloseRef             = useRef(false)
   const [showSaved, setShowSaved]             = useState(false)
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
+  const [saveState, setSaveState]             = useState<'idle' | 'saving' | 'saved'>('idle')
 
   // ── Close helper ──────────────────────────────────────────────────────────────
   const handleClose = () => {
@@ -219,6 +221,14 @@ export default function CartDrawer() {
 
   const handleCancelNewPO = () => {
     setNewPOName(''); setNewPOError(''); setAddingNewPO(false)
+  }
+
+  const handleSavePO = async () => {
+    if (saveState === 'saving' || items.length === 0) return
+    setSaveState('saving')
+    await new Promise(resolve => setTimeout(resolve, 600))
+    setSaveState('saved')
+    setTimeout(() => setSaveState('idle'), 1500)
   }
 
   // ── Data derivation ───────────────────────────────────────────────────────────
@@ -301,21 +311,8 @@ export default function CartDrawer() {
                       className="sticky top-0 z-10 flex items-center justify-between px-4 shrink-0 border-b-2 relative"
                       style={{ height: '50px', borderColor: COLORS.lightGrey, backgroundColor: COLORS.beige }}
                     >
-                      {/* Close — left on mobile (back chevron), right on desktop (×) */}
-                      <button onClick={handleClose} aria-label="Close cart"
-                        className="no-min-h flex items-center justify-center w-8 h-8"
-                        style={{ color: COLORS.darkestGrey }}
-                      >
-                        {/* Back arrow — mobile */}
-                        <svg className="block md:hidden" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                          <path d="M10 2L4 8l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        {/* × — desktop */}
-                        <span className="hidden md:block rotate-45 text-2xl leading-none">+</span>
-                      </button>
-
-                      {/* Title — centered on mobile, left on desktop */}
-                      <div className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0 md:left-auto flex items-center gap-2">
+                      {/* Title — left */}
+                      <div className="flex items-center gap-2">
                         <span className="font-bold" style={{ color: COLORS.darkestGrey, fontSize: '14px' }}>Draft Purchase Order</span>
                         <AnimatePresence>
                           {showSaved && (
@@ -335,8 +332,13 @@ export default function CartDrawer() {
                         </AnimatePresence>
                       </div>
 
-                      {/* Spacer for balance on mobile */}
-                      <div className="w-8 md:hidden" />
+                      {/* Close — right */}
+                      <button onClick={handleClose} aria-label="Close cart"
+                        className="no-min-h flex items-center justify-center w-6 h-6 hover:opacity-70 transition-opacity"
+                        style={{ color: COLORS.darkestGrey }}
+                      >
+                        <CloseIcon />
+                      </button>
                     </div>
 
                     {/* PO selector — or "Assign to PO" prompt in staging mode */}
@@ -625,7 +627,7 @@ export default function CartDrawer() {
                       {/* Empty state */}
                       {itemsByVendor.length === 0 && (
                         <div className="px-4 flex flex-col items-center justify-center py-16 text-center">
-                          <p className="font-bold" style={{ color: COLORS.darkGrey, fontSize: '16px' }}>Your cart is empty</p>
+                          <p className="font-bold" style={{ color: COLORS.darkGrey, fontSize: '16px' }}>Your PO is empty</p>
                           <p className="mt-1" style={{ color: COLORS.midGrey, fontSize: '13px' }}>Add products to get started</p>
                         </div>
                       )}
@@ -647,7 +649,7 @@ export default function CartDrawer() {
                                 <div className="flex items-center justify-between px-4 py-3">
                                   <span className="font-bold" style={{ color: COLORS.midGrey, fontSize: '14px' }}>{vendor.name}</span>
                                   <Link href={`/vendors/${vendor.id}`} onClick={handleClose}
-                                    className="flex items-center gap-1.5 bg-[#beead8] hover:bg-[#a8dcc4] transition-colors rounded-full h-[26px] px-3 text-[11px] font-bold text-[#035257] whitespace-nowrap"
+                                    className="text-[12px] font-bold text-[#28ba93] hover:underline whitespace-nowrap no-min-h"
                                   >Add more</Link>
                                 </div>
 
@@ -729,29 +731,14 @@ export default function CartDrawer() {
                             View all <ChevronRightIcon />
                           </button>
                         </div>
-                        <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                        <div className="flex items-stretch gap-2 overflow-x-auto pb-4 scrollbar-hide">
                           {recentlyPurchased.map((rp, i) => {
                             const rpVendor  = vendors.find(v => v.id === rp.vendorId)
                             const rpProduct = rpVendor?.products.find(p => p.id === rp.productId)
+                            if (!rpVendor || !rpProduct) return null
                             return (
-                              <div key={i} className="relative shrink-0 w-[163px] bg-white flex flex-col"
-                                style={{ border: `1px solid ${COLORS.lightGrey}`, borderRadius: '4px', boxShadow: '0px 2px 4px 0px #e6e6e6' }}
-                              >
-                                <div className="flex items-center justify-center p-2" style={{ height: '120px' }}>
-                                  {rpProduct?.image ? (
-                                    <img src={rpProduct.image} alt={rp.productName} className="w-full h-full object-contain mix-blend-multiply" />
-                                  ) : (
-                                    <div className="w-full h-full rounded" style={{ backgroundColor: COLORS.beige }} />
-                                  )}
-                                </div>
-                                <div className="flex flex-col gap-1 px-2 pb-2">
-                                  <span className="font-bold" style={{ color: COLORS.darkTeal, fontSize: '11px' }}>{rp.vendorName}</span>
-                                  <span className="font-bold leading-tight" style={{ color: COLORS.darkGrey, fontSize: '11px' }}>{rp.productName}</span>
-                                  <span style={{ color: COLORS.midGrey, fontSize: '11px' }}>${rp.price.toFixed(2)}/ unit</span>
-                                </div>
-                                <div className="absolute top-2 right-2">
-                                  <AddToCartButton vendorId={rp.vendorId} productId={rp.productId} />
-                                </div>
+                              <div key={i} className="shrink-0 w-[150px] flex flex-col [&>a]:flex-1 [&>a]:flex [&>a]:flex-col [&>a>div]:!w-full [&>a>div]:flex-1">
+                                <ProductCard product={rpProduct} vendor={rpVendor} />
                               </div>
                             )
                           })}
@@ -828,9 +815,58 @@ export default function CartDrawer() {
                       />
                     </div>
 
-                    <div className="flex items-center justify-center px-4" style={{ height: '65px', backgroundColor: COLORS.beige }}>
+                    <div className="flex items-center gap-2 px-4" style={{ height: '65px', backgroundColor: COLORS.beige }}>
+                      {/* Save PO — 1/3 */}
                       <button
-                        className="w-full rounded-full font-bold transition-colors no-min-h"
+                          onClick={handleSavePO}
+                          disabled={saveState === 'saving' || items.length === 0}
+                          aria-label={saveState === 'idle' ? 'Save purchase order' : saveState === 'saving' ? 'Saving purchase order...' : 'Purchase order saved'}
+                          aria-disabled={saveState === 'saving' || items.length === 0}
+                          className="no-min-h basis-1/3 rounded-full font-bold transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.96]"
+                          style={{
+                            height: '52px',
+                            fontSize: '14px',
+                            backgroundColor: saveState !== 'idle' ? COLORS.primaryTeal : 'white',
+                            color: saveState !== 'idle' ? 'white' : COLORS.primaryTeal,
+                          }}
+                        >
+                          <AnimatePresence mode="wait">
+                            <motion.span
+                              key={saveState}
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              transition={{ duration: 0.15 }}
+                              className="flex items-center gap-1.5"
+                            >
+                              {saveState === 'idle' && 'Save PO'}
+                              {saveState === 'saving' && (
+                                <>
+                                  <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="40 60"/>
+                                  </svg>
+                                  Saving...
+                                </>
+                              )}
+                              {saveState === 'saved' && (
+                                <>
+                                  <motion.svg
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                                    width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                  >
+                                    <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </motion.svg>
+                                  Saved
+                                </>
+                              )}
+                            </motion.span>
+                          </AnimatePresence>
+                        </button>
+                      {/* Continue to Checkout — 2/3 */}
+                      <button
+                        className="no-min-h basis-2/3 flex-1 rounded-full font-bold transition-all no-min-h disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                         style={{
                           height: '52px',
                           backgroundColor: allMinsMet ? COLORS.primaryTeal : COLORS.lightGrey,
