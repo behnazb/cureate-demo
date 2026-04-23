@@ -96,7 +96,7 @@ export default function SearchBar({ placeholder = 'Search by products, vendor or
   }
 
   return (
-    <div ref={containerRef} className="relative flex-1 min-w-[360px]">
+    <div ref={containerRef} className="relative flex-1 w-full">
 
       {/* INPUT */}
       <div className={`

@@ -22,7 +22,7 @@ export default function VendorsPage() {
         <header className="hidden md:flex items-center justify-between bg-white px-9 py-4 border-b border-[#e8e8e8] shrink-0 sticky top-0 z-10">
           <h1 className="text-[20px] font-bold text-[#1f1f1f] whitespace-nowrap shrink-0">Vendors</h1>
           <div className="h-[38px] flex items-center min-w-[280px] max-w-[340px] ml-6">
-            <SearchBar placeholder="Search vendors, locations, or categories" />
+            <SearchBar placeholder="Search vendors" />
           </div>
         </header>
 
