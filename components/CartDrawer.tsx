@@ -816,11 +816,11 @@ export default function CartDrawer() {
                     </div>
 
                     <div className="flex items-center gap-2 px-4" style={{ height: '65px', backgroundColor: COLORS.beige }}>
-                      {/* Save PO — 1/3 */}
+                      {/* Save Draft — 1/3 */}
                       <button
                           onClick={handleSavePO}
                           disabled={saveState === 'saving' || items.length === 0}
-                          aria-label={saveState === 'idle' ? 'Save purchase order' : saveState === 'saving' ? 'Saving purchase order...' : 'Purchase order saved'}
+                          aria-label={saveState === 'idle' ? 'Save draft purchase order' : saveState === 'saving' ? 'Saving draft...' : 'Draft saved'}
                           aria-disabled={saveState === 'saving' || items.length === 0}
                           className="no-min-h basis-1/3 rounded-full font-bold transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.96]"
                           style={{
@@ -839,7 +839,7 @@ export default function CartDrawer() {
                               transition={{ duration: 0.15 }}
                               className="flex items-center gap-1.5"
                             >
-                              {saveState === 'idle' && 'Save PO'}
+                              {saveState === 'idle' && 'Save Draft'}
                               {saveState === 'saving' && (
                                 <>
                                   <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -864,7 +864,7 @@ export default function CartDrawer() {
                             </motion.span>
                           </AnimatePresence>
                         </button>
-                      {/* Continue to Checkout — 2/3 */}
+                      {/* Continue to PO — 2/3 */}
                       <button
                         className="no-min-h basis-2/3 flex-1 rounded-full font-bold transition-all no-min-h disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                         style={{
@@ -876,7 +876,7 @@ export default function CartDrawer() {
                         onClick={() => setDrawerView('confirmation')}
                         disabled={!allMinsMet}
                       >
-                        Continue to Checkout
+                        Continue to PO
                       </button>
                     </div>
                   </div>

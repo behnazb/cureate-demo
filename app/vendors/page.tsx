@@ -4,15 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { vendors } from "@/lib/data";
 import Sidebar from "@/components/Sidebar";
-
-function SearchIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-      <circle cx="5.5" cy="5.5" r="4" stroke="#a1a4aa" strokeWidth="1.5" />
-      <path d="M9 9l2.5 2.5" stroke="#a1a4aa" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
+import SearchBar from "@/components/SearchBar";
 
 function shortenCert(cert: string) {
   return cert.replace(/\s*Business\s*$/i, "");
@@ -27,16 +19,10 @@ export default function VendorsPage() {
       <main className="flex-1 flex flex-col overflow-hidden">
 
         {/* Header — desktop only (MobileNav handles mobile) */}
-        <header className="hidden md:flex bg-white px-9 py-3 items-center justify-between border-b border-gray-200 shrink-0">
-          <h1 className="text-xl font-bold" style={{ color: "#444955" }}>Vendors</h1>
-          <div className="relative flex items-center">
-            <span className="absolute left-3 pointer-events-none"><SearchIcon /></span>
-            <input
-              type="text"
-              placeholder="Search vendors"
-              className="rounded-full border text-xs w-56 pl-8 pr-3 py-1 outline-none focus:border-[#28ba93]"
-              style={{ borderColor: "#a1a4aa", color: "#444955" }}
-            />
+        <header className="hidden md:flex items-center justify-between bg-white px-9 py-4 border-b border-[#e8e8e8] shrink-0 sticky top-0 z-10">
+          <h1 className="text-[20px] font-bold text-[#1f1f1f] whitespace-nowrap shrink-0">Vendors</h1>
+          <div className="h-[38px] flex items-center min-w-[280px] max-w-[340px] ml-6">
+            <SearchBar placeholder="Search vendors, locations, or categories" />
           </div>
         </header>
 

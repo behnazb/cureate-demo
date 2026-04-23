@@ -44,7 +44,7 @@ function highlight(text: string, query: string) {
   )
 }
 
-export default function SearchBar() {
+export default function SearchBar({ placeholder = 'Search by products, vendor or SKU' }: { placeholder?: string }) {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
   const [selected, setSelected] = useState(-1)
@@ -122,7 +122,7 @@ export default function SearchBar() {
           onChange={e => { setQuery(e.target.value); setSelected(-1) }}
           onFocus={() => setFocused(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search by products, vendor or SKU"
+          placeholder={placeholder}
           className="flex-1 bg-transparent text-[#444955] placeholder-[#737780] outline-none font-['Lato'] min-w-0"
           style={{ fontSize: t.text11 }}
         />
