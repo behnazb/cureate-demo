@@ -142,7 +142,7 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
                 <div className="flex gap-2">
                   {socials.map(({ label, icon }) => (
                     <a key={label} href="#" aria-label={label}
-                      className="w-9 h-9 rounded-full bg-[#f7f5ef] flex items-center justify-center text-[#777] hover:bg-[#e8e8e8] transition-colors">
+                      className="no-min-h w-9 h-9 rounded-full bg-[#f7f5ef] flex items-center justify-center text-[#777] hover:bg-[#e8e8e8] transition-colors">
                       {icon}
                     </a>
                   ))}
