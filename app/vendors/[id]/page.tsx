@@ -29,7 +29,7 @@ function LocationIcon({ color = COLORS.greyText }: { color?: string }) {
 
 function GlobeIcon({ color = COLORS.greyText }: { color?: string }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ display: "block" }}>
       <circle cx="7" cy="7" r="5.5" stroke={color} strokeWidth="1.3"/>
       <path d="M7 1.5C7 1.5 5 4 5 7s2 5.5 2 5.5M7 1.5C7 1.5 9 4 9 7s-2 5.5-2 5.5M1.5 7h11" stroke={color} strokeWidth="1.3"/>
     </svg>
@@ -317,9 +317,9 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
               <p className="text-[14px] text-[#1f1f1f] leading-snug">{vendor.address}</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="shrink-0 text-[#999]"><GlobeIcon color="#999" /></span>
+              <span className="shrink-0 flex items-center text-[#999]"><GlobeIcon color="#999" /></span>
               <a href={vendor.website} target="_blank" rel="noopener noreferrer"
-                className="text-[14px] font-bold text-[#28ba93]">
+                className="text-[14px] font-bold text-[#28ba93] leading-none">
                 {vendor.website.replace(/^https?:\/\//, "")}
               </a>
             </div>
@@ -390,9 +390,9 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
 
         {/* ══════════════════ PRODUCTS (shared, responsive) ══════════════════ */}
         <section className="border-t border-[#e8e8e8] mt-4 md:mt-0 pb-8">
-          <div className="flex items-center justify-between px-4 md:px-12 pt-6 pb-3 md:max-w-4xl md:mx-auto">
+          <div className="flex items-center justify-between px-4 md:px-12 pt-6 pb-3">
             <h2 className="text-[18px] md:text-[20px] font-black text-[#1f1f1f] uppercase tracking-tight">Products</h2>
-            <Link href={`/vendors/${vendor.id}/products`} className="text-[12px] font-bold text-[#28ba93] no-min-h">
+            <Link href={`/vendors/${vendor.id}/products`} className="text-[14px] font-bold text-[#28ba93] no-min-h">
               View all →
             </Link>
           </div>
