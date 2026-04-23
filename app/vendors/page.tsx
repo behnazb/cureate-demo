@@ -1,19 +1,9 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { vendors } from "@/lib/data";
-import { t } from "@/lib/tokens";
 import Sidebar from "@/components/Sidebar";
-
-const COLORS = {
-  primaryTeal: "#28ba93",
-  darkTeal: "#035257",
-  medTeal: "#377b82",
-  border: "#a1a4aa",
-  beige: "#f7f5ef",
-  greyText: "#777",
-  darkGreyText: "#444955",
-} as const;
 
 function SearchIcon() {
   return (
@@ -22,6 +12,10 @@ function SearchIcon() {
       <path d="M9 9l2.5 2.5" stroke="#a1a4aa" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
+}
+
+function shortenCert(cert: string) {
+  return cert.replace(/\s*Business\s*$/i, "");
 }
 
 export default function VendorsPage() {
@@ -34,88 +28,87 @@ export default function VendorsPage() {
 
         {/* Header — desktop only (MobileNav handles mobile) */}
         <header className="hidden md:flex bg-white px-9 py-3 items-center justify-between border-b border-gray-200 shrink-0">
-          <h1 className="text-xl font-bold" style={{ color: COLORS.darkGreyText }}>Vendors</h1>
+          <h1 className="text-xl font-bold" style={{ color: "#444955" }}>Vendors</h1>
           <div className="relative flex items-center">
             <span className="absolute left-3 pointer-events-none"><SearchIcon /></span>
             <input
               type="text"
               placeholder="Search vendors"
               className="rounded-full border text-xs w-56 pl-8 pr-3 py-1 outline-none focus:border-[#28ba93]"
-              style={{ borderColor: COLORS.border, color: COLORS.darkGreyText }}
+              style={{ borderColor: "#a1a4aa", color: "#444955" }}
             />
           </div>
         </header>
 
-        {/* Vendor grid */}
-        <div className="flex-1 overflow-y-auto bg-white px-4 md:px-9 py-4 md:py-8">
-          <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}
-          >
+        {/* Vendor list */}
+        <div className="flex-1 overflow-y-auto bg-white">
+          <div className="flex flex-col gap-4 px-4 md:px-9 py-5">
             {vendors.map((vendor) => (
-              <Link
-                key={vendor.id}
-                href={`/vendors/${vendor.id}`}
-                className="flex gap-4 p-4 rounded-xl border hover:shadow-md transition-shadow no-min-h"
-                style={{ borderColor: "#e8e8e8" }}
-              >
-                {/* Logo */}
-                <div
-                  className="w-16 h-16 rounded-full border shrink-0 overflow-hidden flex items-center justify-center"
-                  style={{ borderColor: "#e8e8e8", backgroundColor: COLORS.beige }}
+              <Link key={vendor.id} href={`/vendors/${vendor.id}`} className="block">
+                <article
+                  className="bg-white border border-[#e8e8e8] rounded-2xl overflow-hidden transition-shadow"
+                  style={{
+                    boxShadow: "2px 2px 10px 0 rgba(156,153,153,0.12)",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = "2px 2px 16px 0 rgba(156,153,153,0.18)")}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = "2px 2px 10px 0 rgba(156,153,153,0.12)")}
                 >
-                  <img
-                    src={vendor.logo}
-                    alt={vendor.name}
-                    className="w-full h-full object-cover mix-blend-multiply"
-                  />
-                </div>
+                  {/* ── IDENTITY ZONE ── */}
+                  <div className="flex gap-4 p-5 pb-4">
 
-                {/* Info */}
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                  <p className="font-bold" style={{ color: COLORS.darkGreyText, fontSize: t.text16 }}>{vendor.name}</p>
-                  <p style={{ color: COLORS.greyText, fontSize: t.text13 }}>{vendor.location}</p>
+                    {/* Logo */}
+                    <div className="w-[72px] h-[72px] rounded-xl bg-white border border-[#f0f0f0] shrink-0 flex items-center justify-center overflow-hidden">
+                      <img
+                        src={vendor.logo}
+                        alt={vendor.name}
+                        className="w-full h-full object-contain p-2"
+                      />
+                    </div>
 
-                  {/* Category pills */}
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {vendor.categories.map((cat) => (
-                      <span
-                        key={cat}
-                        className="rounded-full px-3 py-1 bg-gray-100"
-                        style={{ color: COLORS.darkGreyText, fontSize: t.text11 }}
-                      >
-                        {cat}
-                      </span>
-                    ))}
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      {/* Location eyebrow */}
+                      <p className="text-[11px] font-bold text-[#28ba93] uppercase tracking-[0.08em] mb-1">
+                        {vendor.location}
+                      </p>
+
+                      {/* Vendor name */}
+                      <h3 className="text-[20px] font-black text-[#1f1f1f] leading-tight tracking-tight mb-2">
+                        {vendor.name}
+                      </h3>
+
+                      {/* Metadata — dot-separated, no pills */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {vendor.categories?.[0] && (
+                          <span className="text-[11px] font-medium text-[#666]">
+                            {vendor.categories[0]}
+                          </span>
+                        )}
+                        {vendor.certifications?.map((cert) => (
+                          <React.Fragment key={cert}>
+                            <span className="text-[11px] text-[#ccc]">·</span>
+                            <span className="text-[11px] font-medium text-[#666]">
+                              {shortenCert(cert)}
+                            </span>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Certification pills */}
-                  {vendor.certifications.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-0.5">
-                      {vendor.certifications.map((cert) => (
-                        <span
-                          key={cert}
-                          className="text-[10px] border rounded-full px-2 py-0.5"
-                          style={{ borderColor: COLORS.medTeal, color: COLORS.medTeal }}
-                        >
-                          {cert}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* View Profile pill button (visual span — parent <Link> handles navigation) */}
-                  <div className="mt-2">
-                    <span
-                      className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[12px] font-bold rounded-full border border-[#035257] text-[#035257] bg-white"
-                    >
+                  {/* ── ACTION STRIP ── */}
+                  <div className="border-t border-[#f0f0f0] bg-[#fbfaf6] flex items-center justify-between px-5 py-2.5">
+                    <span className="text-[12px] text-[#999]">
+                      {vendor.products?.length ?? 0} products available
+                    </span>
+                    <span className="text-[13px] font-bold text-[#035257] inline-flex items-center gap-1">
                       View Profile
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M3 2l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
+                        <path d="M3 2l3 3-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </span>
                   </div>
-                </div>
+                </article>
               </Link>
             ))}
           </div>
