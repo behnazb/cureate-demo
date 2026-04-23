@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { vendors } from "@/lib/data";
 import { t } from "@/lib/tokens";
 import Sidebar from "@/components/Sidebar";
@@ -8,8 +9,6 @@ const COLORS = {
   primaryTeal: "#28ba93",
   darkTeal: "#035257",
   medTeal: "#377b82",
-  sidebarBg: "#1f1f1f",
-  activeNavBg: "#363636",
   border: "#a1a4aa",
   beige: "#f7f5ef",
   greyText: "#777",
@@ -31,11 +30,10 @@ export default function VendorsPage() {
 
       <Sidebar />
 
-      {/* ── Main Content ── */}
       <main className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Header */}
-        <header className="bg-white px-9 py-3 flex items-center justify-between border-b border-gray-200 shrink-0">
+        {/* Header — desktop only (MobileNav handles mobile) */}
+        <header className="hidden md:flex bg-white px-9 py-3 items-center justify-between border-b border-gray-200 shrink-0">
           <h1 className="text-xl font-bold" style={{ color: COLORS.darkGreyText }}>Vendors</h1>
           <div className="relative flex items-center">
             <span className="absolute left-3 pointer-events-none"><SearchIcon /></span>
@@ -49,13 +47,16 @@ export default function VendorsPage() {
         </header>
 
         {/* Vendor grid */}
-        <div className="flex-1 overflow-y-auto bg-white px-9 py-8">
-          <div className="grid grid-cols-1 gap-4 max-w-3xl" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
+        <div className="flex-1 overflow-y-auto bg-white px-4 md:px-9 py-4 md:py-8">
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}
+          >
             {vendors.map((vendor) => (
-              <a
+              <Link
                 key={vendor.id}
                 href={`/vendors/${vendor.id}`}
-                className="flex gap-4 p-4 rounded-xl border hover:shadow-md transition-shadow"
+                className="flex gap-4 p-4 rounded-xl border hover:shadow-md transition-shadow no-min-h"
                 style={{ borderColor: "#e8e8e8" }}
               >
                 {/* Logo */}
@@ -74,19 +75,23 @@ export default function VendorsPage() {
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                   <p className="font-bold" style={{ color: COLORS.darkGreyText, fontSize: t.text16 }}>{vendor.name}</p>
                   <p style={{ color: COLORS.greyText, fontSize: t.text13 }}>{vendor.location}</p>
-                  <div className="flex flex-wrap gap-1 mt-1">
+
+                  {/* Category pills */}
+                  <div className="flex flex-wrap gap-1.5 mt-1">
                     {vendor.categories.map((cat) => (
                       <span
                         key={cat}
-                        className="rounded-full px-3 py-1.5 bg-gray-100"
+                        className="rounded-full px-3 py-1 bg-gray-100"
                         style={{ color: COLORS.darkGreyText, fontSize: t.text11 }}
                       >
                         {cat}
                       </span>
                     ))}
                   </div>
+
+                  {/* Certification pills */}
                   {vendor.certifications.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-0.5">
+                    <div className="flex flex-wrap gap-1.5 mt-0.5">
                       {vendor.certifications.map((cert) => (
                         <span
                           key={cert}
@@ -98,11 +103,20 @@ export default function VendorsPage() {
                       ))}
                     </div>
                   )}
-                  <span className="font-bold mt-1" style={{ color: COLORS.darkTeal, fontSize: t.text13 }}>
-                    View Profile →
-                  </span>
+
+                  {/* View Profile pill button (visual span — parent <Link> handles navigation) */}
+                  <div className="mt-2">
+                    <span
+                      className="inline-flex items-center gap-1.5 h-[30px] px-3 text-[12px] font-bold rounded-full border border-[#035257] text-[#035257] bg-white"
+                    >
+                      View Profile
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M3 2l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                  </div>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         </div>
