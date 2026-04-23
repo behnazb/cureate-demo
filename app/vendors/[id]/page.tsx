@@ -85,6 +85,8 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
     { label: "Insurance", value: "General Liability, Workers' Comp" },
     { label: "Health Dept. Clearance", value: "Yes" },
     { label: "Certifications", value: vendor.certifications.join(", ") || "—" },
+    ...(vendor.categories?.length ? [{ label: "Categories", value: vendor.categories.join(", ") }] : []),
+    ...(vendor.goals?.length ? [{ label: "Goal", value: vendor.goals[0] }] : []),
   ];
 
   const logisticsRows = [
@@ -96,7 +98,13 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
     { label: "Growth Goals", value: "Certified" },
   ];
 
-  const marketingAssets = ["Small (5x3)", "Medium (4x6)", "Large (8.5x11)", "Digital Flyer", "Monitor Graphic"];
+  const marketingAssets = [
+    { name: "Small (5x3)",      url: "#" },
+    { name: "Medium (4x6)",     url: "#" },
+    { name: "Large (8.5x11)",   url: "#" },
+    { name: "Digital Flyer",    url: "#" },
+    { name: "Monitor Graphic",  url: "#" },
+  ];
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ fontFamily: "var(--font-lato), Arial, sans-serif" }}>
@@ -258,20 +266,24 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
                 </>
               )}
 
-              <h2 className="font-bold mb-2" style={{ color: COLORS.darkGreyText, fontSize: t.text16 }}>Marketing</h2>
-              <div className="mb-2">
-                <span className="text-sm font-bold" style={{ color: COLORS.medTeal }}>🏷️ Vendor Spotlights</span>
-              </div>
-              <p className="text-sm mb-2" style={{ color: COLORS.darkGreyText }}>
+              <h2 className="font-bold mb-2" style={{ color: COLORS.darkGreyText, fontSize: t.text16 }}>Vendor Resources</h2>
+              <p className="text-sm mb-3" style={{ color: COLORS.darkGreyText }}>
                 Download promotional materials to feature this vendor in your marketplace or dining communications.
               </p>
-              <ul className="flex flex-col gap-1 mb-5">
-                {marketingAssets.map((item) => (
-                  <li key={item}>
-                    <a href="#" className="text-sm hover:underline" style={{ color: COLORS.medTeal }}>• {item}</a>
-                  </li>
+              <div className="grid grid-cols-2 gap-2 mb-5">
+                {marketingAssets.map((asset) => (
+                  <a
+                    key={asset.name}
+                    href={asset.url}
+                    className="flex items-center gap-2 p-3 bg-white border border-[#e8e8e8] rounded-lg hover:bg-[#f7f5ef] transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#28ba93]">
+                      <path d="M8 2v9m0 0l-3-3m3 3l3-3M3 13h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span className="text-[12px] font-bold text-[#1f1f1f] truncate">{asset.name}</span>
+                  </a>
                 ))}
-              </ul>
+              </div>
 
               <h2 className="text-lg font-bold mb-3" style={{ color: COLORS.darkGreyText }}>Logistics & Fulfillment</h2>
               <table className="w-full text-sm">
@@ -298,22 +310,20 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
           </section>
 
           {/* 2. Contact & Location */}
-          <div className="mx-4 my-5">
-            <div className="p-4 bg-[#f7f5ef] rounded-xl">
-              <h3 className="text-[11px] font-bold text-[#999] uppercase tracking-wide mb-3">Contact & Location</h3>
-              <div className="flex items-start gap-3 mb-3">
-                <span className="mt-0.5 shrink-0 text-[#666]"><LocationIcon color="#666" /></span>
-                <p className="text-[14px] text-[#1f1f1f] leading-snug">{vendor.address}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="shrink-0 text-[#666]"><GlobeIcon color="#666" /></span>
-                <a href={vendor.website} target="_blank" rel="noopener noreferrer"
-                  className="text-[14px] font-bold text-[#28ba93]">
-                  {vendor.website.replace(/^https?:\/\//, "")}
-                </a>
-              </div>
+          <section className="px-4 py-5 border-b border-[#e8e8e8]">
+            <h3 className="text-[13px] font-bold text-[#666] uppercase tracking-wide mb-3">Contact & Location</h3>
+            <div className="flex items-start gap-3 mb-2">
+              <span className="mt-1 shrink-0 text-[#999]"><LocationIcon color="#999" /></span>
+              <p className="text-[14px] text-[#1f1f1f] leading-snug">{vendor.address}</p>
             </div>
-          </div>
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 text-[#999]"><GlobeIcon color="#999" /></span>
+              <a href={vendor.website} target="_blank" rel="noopener noreferrer"
+                className="text-[14px] font-bold text-[#28ba93]">
+                {vendor.website.replace(/^https?:\/\//, "")}
+              </a>
+            </div>
+          </section>
 
           {/* 3. Our Story */}
           {vendor.story && (
@@ -336,57 +346,28 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
             </div>
           </div>
 
-          {/* 5. Categories */}
-          <div className="px-4 py-5 border-b border-[#e8e8e8]">
-            <h3 className="text-[11px] font-bold text-[#999] uppercase tracking-wide mb-3">Categories</h3>
-            <div className="flex flex-wrap gap-2">
-              {vendor.categories.map((cat) => (
-                <span key={cat} className="h-[30px] px-3 text-[12px] font-bold rounded-full bg-[#f0f0f0] text-[#1f1f1f] flex items-center">
-                  {cat}
-                </span>
-              ))}
-            </div>
-          </div>
+          {/* 5+6. Categories & Goals folded into Business Details above */}
 
-          {/* 6. Goals */}
-          {vendor.goals && vendor.goals.length > 0 && (
-            <section className="px-4 py-5 border-b border-[#e8e8e8]">
-              <h2 className="text-[18px] font-bold text-[#1f1f1f] mb-4">Goals</h2>
-              <div className="flex flex-wrap gap-4">
-                {vendor.goals.map((goal) => (
-                  <div key={goal} className="flex flex-col items-center gap-1">
-                    <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center" style={{ borderColor: COLORS.darkGreyText }}>
-                      <DollarIcon />
-                    </div>
-                    <p className="text-xs text-center" style={{ color: COLORS.darkGreyText }}>{goal}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* 7. Marketing */}
+          {/* 7. Vendor Resources */}
           <section className="px-4 py-5 border-b border-[#e8e8e8]">
-            <h2 className="text-[18px] font-bold text-[#1f1f1f] mb-3">Marketing</h2>
-            <div className="flex items-center gap-2 mb-3 bg-[#fef3c7] border border-[#fcd34d] rounded-lg px-3 py-2">
-              <span className="text-sm">🏷️</span>
-              <span className="text-[13px] font-bold text-[#92400e]">Vendor Spotlights</span>
-            </div>
-            <p className="text-[14px] leading-relaxed mb-3" style={{ color: COLORS.greyText }}>
+            <h2 className="text-[18px] font-bold text-[#1f1f1f] mb-2">Vendor Resources</h2>
+            <p className="text-[14px] text-[#666] leading-relaxed mb-4">
               Download promotional materials to feature this vendor in your marketplace or dining communications.
             </p>
-            <ul className="space-y-2">
-              {marketingAssets.map((item) => (
-                <li key={item}>
-                  <a href="#" className="flex items-center gap-2 text-[14px] font-bold text-[#28ba93] hover:underline">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M7 1v8M4 6l3 3 3-3M2 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    {item}
-                  </a>
-                </li>
+            <div className="grid grid-cols-2 gap-2">
+              {marketingAssets.map((asset) => (
+                <a
+                  key={asset.name}
+                  href={asset.url}
+                  className="flex items-center gap-2 p-3 bg-white border border-[#e8e8e8] rounded-lg hover:bg-[#f7f5ef] transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 text-[#28ba93]">
+                    <path d="M8 2v9m0 0l-3-3m3 3l3-3M3 13h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span className="text-[13px] font-bold text-[#1f1f1f] truncate">{asset.name}</span>
+                </a>
               ))}
-            </ul>
+            </div>
           </section>
 
           {/* 8. Logistics & Fulfillment */}
@@ -398,8 +379,8 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
                   key={label}
                   className={`flex justify-between items-start gap-4 py-3 ${i < logisticsRows.length - 1 ? "border-b border-[#f0f0f0]" : ""}`}
                 >
-                  <p className="text-[12px] font-bold uppercase tracking-wide shrink-0 w-[44%]" style={{ color: COLORS.greyText }}>{label}</p>
-                  <p className="text-[14px] text-[#1f1f1f] text-right">{value}</p>
+                  <p className="text-[12px] font-bold uppercase tracking-wide shrink-0 w-[38%]" style={{ color: COLORS.greyText }}>{label}</p>
+                  <p className="text-[14px] text-[#1f1f1f] text-right flex-1">{value}</p>
                 </div>
               ))}
             </div>
@@ -411,7 +392,7 @@ export default function VendorPage({ params }: { params: Promise<{ id: string }>
         <section className="border-t border-[#e8e8e8] mt-4 md:mt-0 pb-8">
           <div className="flex items-center justify-between px-4 md:px-12 pt-6 pb-3 md:max-w-4xl md:mx-auto">
             <h2 className="text-[18px] md:text-[20px] font-black text-[#1f1f1f] uppercase tracking-tight">Products</h2>
-            <Link href={`/products`} className="text-[12px] font-bold text-[#28ba93] no-min-h">
+            <Link href={`/vendors/${vendor.id}/products`} className="text-[12px] font-bold text-[#28ba93] no-min-h">
               View all →
             </Link>
           </div>
