@@ -1,0 +1,73 @@
+<%#
+  Sidebar (desktop, md+).
+  Active link styling driven by Rails: `current_page?(...)` decides which item to highlight.
+  PO subnav is rendered only when on /purchase-orders and uses the ?tab= query param.
+%>
+<aside class="hidden md:flex relative z-[60] h-screen flex-col justify-between shrink-0 py-5 px-3 w-[275px] bg-[#1f1f1f]">
+  <div>
+    <div class="px-3 mb-6">
+      <img src="/cureate-logo.svg" alt="Cureate Connect" class="w-[126px] h-auto mb-2">
+    </div>
+
+    <%
+      nav_links = [
+        { label: "Dashboard",       icon: "/icon_dashboard.svg",       href: root_path },
+        { label: "Vendors",         icon: "/icon_vendors.svg",         href: vendors_path },
+        { label: "All Orders",      icon: "/icon_all_orders.svg",      href: "#" },
+        {
+          label: "Purchase Orders", icon: "/icon_purchase_orders.svg", href: purchase_orders_path,
+          sub_items: [
+            { label: "Drafts",    href: purchase_orders_path(tab: "draft"),     tab: "draft" },
+            { label: "Submitted", href: purchase_orders_path(tab: "submitted"), tab: "submitted" },
+          ],
+        },
+        { label: "Products",        icon: "/icon_products.svg",        href: products_path },
+        { label: "Requests",        icon: "/icon_requests.svg",        href: "#" },
+      ]
+    %>
+
+    <nav class="flex flex-col gap-0.5">
+      <% nav_links.each do |link| %>
+        <% active = link[:href] != "#" && (link[:href] == "/" ? request.path == "/" : request.path.start_with?(link[:href])) %>
+        <div>
+          <%= link_to link[:href],
+                class: "flex flex-row items-center gap-3 px-3 py-2 rounded text-white text-sm transition-colors #{active ? 'bg-[#363636] opacity-100' : 'opacity-70'}" do %>
+            <img src="<%= link[:icon] %>" alt="" class="w-4 h-4 shrink-0">
+            <span><%= link[:label] %></span>
+            <% if link[:sub_items] %>
+              <svg viewBox="0 0 7 4" fill="none"
+                   class="ml-auto w-[7px] h-[4px] transition-transform duration-200 <%= 'rotate-180' if active %>">
+                <path d="M1 1l2.5 2L6 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            <% end %>
+          <% end %>
+
+          <% if link[:sub_items] && active %>
+            <% current_tab = params[:tab] || "" %>
+            <div class="flex flex-col gap-0.5 mt-0.5 ml-7">
+              <% link[:sub_items].each do |sub| %>
+                <% sub_active = current_tab == sub[:tab] %>
+                <%= link_to sub[:href],
+                    class: "flex items-center gap-2 px-3 py-1.5 rounded text-white text-[12px] transition-colors",
+                    style: "background-color: #{sub_active ? '#2a2a2a' : 'transparent'}; opacity: #{sub_active ? 1 : 0.55};" do %>
+                  <div class="w-1 h-1 rounded-full shrink-0"
+                       style="background-color: <%= sub_active ? '#28ba93' : 'currentColor' %>"></div>
+                  <%= sub[:label] %>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </nav>
+  </div>
+
+  <%# User identity block — replace with current_user.organization in your production app %>
+  <div class="flex items-center gap-2 px-3 pb-1">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 bg-[#28ba93]">JH</div>
+    <div class="flex flex-col min-w-0">
+      <span class="text-white text-xs font-bold leading-tight truncate">Johns Hopkins University</span>
+      <span class="text-white text-[10px] opacity-60 truncate">buyer@jhu.edu</span>
+    </div>
+  </div>
+</aside>

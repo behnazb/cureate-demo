@@ -1,0 +1,56 @@
+<% content_for :title, "Vendors — Cureate Connect" %>
+
+<div class="flex h-screen overflow-hidden font-['Lato']">
+  <%= render "shared/sidebar" %>
+
+  <main class="flex-1 flex flex-col overflow-hidden">
+
+    <header class="hidden md:flex items-center justify-between bg-white px-9 py-4 border-b border-[#e8e8e8] shrink-0 sticky top-0 z-10">
+      <h1 class="text-[20px] font-bold text-[#1f1f1f] whitespace-nowrap shrink-0">Vendors</h1>
+      <div class="h-[38px] flex items-center min-w-[280px] max-w-[340px] ml-6">
+        <%= render "shared/search_bar", placeholder: "Search vendors" %>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto bg-white">
+      <div class="flex flex-col gap-4 px-4 md:px-9 py-5">
+        <% @vendors.each do |vendor| %>
+          <%= link_to vendor_path(vendor.id), class: "block no-min-h" do %>
+            <article class="bg-white border border-[#e8e8e8] rounded-2xl overflow-hidden transition-shadow hover:shadow-[2px_2px_16px_0_rgba(156,153,153,0.18)] shadow-[2px_2px_10px_0_rgba(156,153,153,0.12)]">
+              <%# IDENTITY ZONE %>
+              <div class="flex gap-4 p-5 pb-4">
+                <div class="w-[72px] h-[72px] rounded-xl bg-white border border-[#f0f0f0] shrink-0 flex items-center justify-center overflow-hidden">
+                  <img src="<%= vendor.logo %>" alt="<%= vendor.name %>" class="w-full h-full object-contain p-2">
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[11px] font-bold text-[#28ba93] uppercase tracking-[0.08em] mb-1"><%= vendor.location %></p>
+                  <h3 class="text-[20px] font-black text-[#1f1f1f] leading-tight tracking-tight mb-2"><%= vendor.name %></h3>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <% if vendor.categories&.first %>
+                      <span class="text-[13px] font-medium text-[#666]"><%= vendor.categories.first %></span>
+                    <% end %>
+                    <% vendor.short_certifications.each do |cert| %>
+                      <span class="text-[13px] text-[#ccc]">·</span>
+                      <span class="text-[13px] font-medium text-[#666]"><%= cert %></span>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+
+              <%# ACTION STRIP %>
+              <div class="border-t border-[#f0f0f0] bg-[#fbfaf6] flex items-center justify-between px-5 py-2.5">
+                <span class="text-[12px] text-[#999]"><%= vendor.products.size %> products available</span>
+                <span class="text-[13px] font-bold text-[#035257] inline-flex items-center gap-1">
+                  View Profile
+                  <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
+                    <path d="M3 2l3 3-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </div>
+            </article>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,6 @@
+<%# Root redirects to /products in routes.rb — this view is a safety net only. %>
+<% content_for :title, "Cureate Connect" %>
+<%= render "shared/sidebar" %>
+<div class="flex-1 flex items-center justify-center">
+  <%= link_to "Browse Products", products_path, class: "bg-[#28ba93] text-white font-bold rounded-full px-6 h-[44px] flex items-center no-min-h" %>
+</div>

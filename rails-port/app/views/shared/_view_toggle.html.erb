@@ -1,0 +1,17 @@
+<div data-controller="view-toggle" class="flex items-center gap-3 shrink-0">
+  <button data-action="click->view-toggle#setList"
+          data-view-toggle-target="listButton"
+          class="flex items-center gap-1.5 transition-colors no-min-h"
+          aria-label="List view">
+    <img src="/icons/icon_list_view.svg" class="w-[12px] h-[9px] brightness-0 opacity-30" alt="list" data-view-toggle-target="listIcon">
+    <span class="font-bold text-[#aaa] text-[14px]" data-view-toggle-target="listLabel">List</span>
+  </button>
+
+  <button data-action="click->view-toggle#setGrid"
+          data-view-toggle-target="gridButton"
+          class="flex items-center gap-1.5 transition-colors no-min-h"
+          aria-label="Grid view">
+    <img src="/icons/icon_grid_view.svg" class="w-[11px] h-[11px] brightness-0 opacity-100" alt="grid" data-view-toggle-target="gridIcon">
+    <span class="font-bold text-[#1f1f1f] text-[14px]" data-view-toggle-target="gridLabel">Grid</span>
+  </button>
+</div>

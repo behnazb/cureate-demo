@@ -1,0 +1,235 @@
+<% content_for :title, "#{@po.id} — Cureate Connect" %>
+<% card_class = "bg-white border border-[#e8e8e8] rounded-xl shadow-[2px_2px_10px_0px_rgba(156,153,153,0.25)]" %>
+
+<div class="flex flex-1 min-h-0 bg-white font-['Lato']">
+  <%= render "shared/sidebar" %>
+
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+    <%# Sticky header / breadcrumb %>
+    <div class="flex items-center justify-between gap-2 px-4 md:px-9 py-3 md:py-4 border-b border-[#e8e8e8] bg-white shrink-0 sticky top-0 z-10">
+      <div class="flex items-center gap-2 text-[13px] min-w-0 flex-1">
+        <%= link_to "Purchase Orders", purchase_orders_path,
+            class: "font-bold text-[#28ba93] hover:text-[#035257] transition-colors no-min-h shrink-0" %>
+        <svg width="6" height="10" viewBox="0 0 6 10" fill="none" class="shrink-0">
+          <path d="M1 1l4 4-4 4" stroke="#a1a4aa" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span class="font-bold text-[#1f1f1f] truncate"><%= @po.id %></span>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <% if @po.draft? %>
+          <button class="no-min-h flex bg-[#28ba93] hover:bg-[#22a882] transition-colors items-center gap-2 rounded-full px-4 h-[38px] text-white font-bold text-[13px] whitespace-nowrap">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" class="shrink-0">
+              <path d="M2 3h2l2.4 9.6A1 1 0 007.36 14h7.28a1 1 0 00.96-.72L17 7H5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="8" cy="17" r="1" fill="white"/>
+              <circle cx="14" cy="17" r="1" fill="white"/>
+            </svg>
+            View Draft PO
+          </button>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Scrollable content %>
+    <div class="flex-1 overflow-y-auto px-4 md:px-9 py-4 md:py-6">
+
+      <%# PO Details card %>
+      <div class="<%= card_class %> p-5 mb-6">
+        <div class="hidden md:flex items-start justify-between mb-4">
+          <div>
+            <h2 class="text-[18px] font-normal text-[#1f1f1f] mb-1">Purchase Order Details</h2>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[12px] text-[#777]"><%= @po.id %></span>
+              <%= render "shared/po_status_badge", status: @po.status %>
+            </div>
+            <% unless @po.draft? %>
+              <p class="text-[11px] text-[#a1a4aa] mt-1.5 flex items-center gap-1">
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                  <rect x="1" y="4.5" width="9" height="6" rx="1" stroke="#a1a4aa" stroke-width="1.1"/>
+                  <path d="M3.5 4.5V3a2 2 0 014 0v1.5" stroke="#a1a4aa" stroke-width="1.1" stroke-linecap="round"/>
+                </svg>
+                This PO is locked — no further changes can be made
+              </p>
+            <% end %>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button class="no-min-h border border-[#035257] text-[#035257] text-[11px] font-bold rounded-full px-3 h-[30px] hover:bg-[#f0fafa] transition-colors whitespace-nowrap">Download CSV</button>
+            <% if @po.draft? %>
+              <%= link_to "+ Add to Order", products_path,
+                  class: "no-min-h bg-[#28ba93] text-white text-[11px] font-bold rounded-full px-3 h-[30px] flex items-center hover:bg-[#22a882] transition-colors whitespace-nowrap" %>
+            <% end %>
+            <%= render "shared/po_dropdown_menu", items: [
+              *( @po.draft? ? [{ label: "Add more to PO", icon: "add", action: "po:add-more", detail: { id: @po.id } }] : [] ),
+              { label: "Duplicate PO",    icon: "duplicate", action: "po:duplicate", detail: { id: @po.id } },
+              { label: "Request support", icon: "support",   action: "po:support",   detail: { id: @po.id } },
+              *( @po.locked? ? [] : [{ label: "Cancel PO", icon: "cancel", action: "po:cancel", danger: true, detail: { id: @po.id } }] ),
+            ] %>
+          </div>
+        </div>
+
+        <%# Two-column info grid %>
+        <div class="grid grid-cols-1 md:grid-cols-[55%_45%] gap-4">
+          <%# Buyer + Shipping %>
+          <div class="bg-[#fafafa] rounded-xl p-4 flex flex-col gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-[#e8e8e8] flex items-center justify-center text-[12px] font-bold text-[#777] shrink-0">JH</div>
+              <div>
+                <p class="text-[14px] font-bold text-[#1f1f1f] leading-tight">Johns Hopkins University</p>
+                <p class="text-[12px] text-[#777]">Charles Street Market</p>
+              </div>
+            </div>
+            <div class="h-px bg-[#e8e8e8]"></div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-1.5">Delivery Address</p>
+                <p class="text-[13px] text-[#1f1f1f] leading-relaxed">3339 N Charles St<br>Baltimore, MD 21218</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-1.5">Contact</p>
+                <p class="text-[13px] text-[#1f1f1f] leading-relaxed">Christopher Land<br>cland5@jh.edu<br>(443) 756-7024</p>
+              </div>
+            </div>
+          </div>
+
+          <%# Order meta + Delivery %>
+          <div class="bg-[#fafafa] rounded-xl p-4 flex flex-col">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-4 mb-4">
+              <div>
+                <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-1">Ordering Window</p>
+                <p class="text-[13px] font-bold text-[#1f1f1f]"><%= @po.date_range ? "#{@po.date_range[:start]} – #{@po.date_range[:end]}" : "—" %></p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-1">Cureator</p>
+                <p class="text-[13px] font-bold text-[#1f1f1f]"><%= @po.cureator_name %></p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-1">Total PO Amount</p>
+                <p class="text-[22px] font-black text-[#1f1f1f] leading-none">$<%= format("%.2f", @total) %></p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-1">Vendors on this PO</p>
+                <div class="flex flex-col gap-0.5">
+                  <% @items_by_vendor.each do |g| %>
+                    <p class="text-[13px] font-bold text-[#1f1f1f]"><%= g[:vendor].name %></p>
+                  <% end %>
+                  <% if @items_by_vendor.empty? %><p class="text-[13px] text-[#777]">—</p><% end %>
+                </div>
+              </div>
+            </div>
+
+            <div class="h-px bg-[#e8e8e8] mb-4"></div>
+
+            <div>
+              <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-2">Delivery Date</p>
+              <p class="text-[14px] font-bold text-[#1f1f1f]">
+                <%= @po.delivery_date ? format_delivery_full(@po.delivery_date) : "—" %>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%# Vendor line item cards %>
+      <% @items_by_vendor.each do |group| %>
+        <% vendor = group[:vendor] %>
+        <div class="<%= card_class %> overflow-hidden mb-4">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-[#f0f0f0]">
+            <div class="flex items-center gap-3">
+              <div class="w-[50px] h-[50px] rounded-full bg-[#f7f5ef] flex items-center justify-center overflow-hidden border border-[#e8e8e8] shrink-0">
+                <img src="<%= vendor.logo %>" alt="<%= vendor.name %>" class="w-full h-full object-contain p-1">
+              </div>
+              <div>
+                <p class="text-[18px] font-normal text-[#1f1f1f]"><%= vendor.name %></p>
+                <p class="text-[11px] text-[#777]">Vendor subtotal: $<%= format("%.2f", group[:vendor_subtotal]) %></p>
+              </div>
+            </div>
+            <%= render "shared/po_dropdown_menu", items: [
+              *( @po.draft? ? [
+                { label: "Add more to PO", icon: "add",  action: "po:add-more",  detail: { id: @po.id, vendor_id: vendor.id } },
+                { label: "Edit order",     icon: "edit", action: "po:edit",      detail: { id: @po.id, vendor_id: vendor.id } },
+              ] : [] ),
+              { label: "Duplicate order", icon: "duplicate", action: "po:duplicate-vendor", detail: { id: @po.id, vendor_id: vendor.id } },
+              *( @po.draft? ? [{ label: "Delete from PO", icon: "delete", action: "po:delete-vendor", danger: true, detail: { id: @po.id, vendor_id: vendor.id } }] : [] ),
+            ] %>
+          </div>
+
+          <%# Column headers (desktop) %>
+          <div class="hidden md:grid grid-cols-[2.5fr_1fr_1fr_1fr_1fr] gap-0 px-5 py-2 bg-[#fafafa] border-b border-[#e8e8e8]">
+            <% ["Product", "Quantity", "Unit Price", "Delivery Fee", "Extended Cost"].each do |h| %>
+              <p class="text-[11px] font-bold text-[#777] uppercase tracking-wide"><%= h %></p>
+            <% end %>
+          </div>
+
+          <% group[:items].each do |item| %>
+            <% next unless item.product %>
+            <div class="border-b border-[#f0f0f0] last:border-0">
+              <div class="hidden md:grid grid-cols-[2.5fr_1fr_1fr_1fr_1fr] gap-0 px-5 py-4 bg-[#fbf9f6] items-start">
+                <div>
+                  <p class="text-[13px] font-bold text-[#444955]"><%= item.product.name %></p>
+                  <p class="text-[11px] text-[#777] mt-0.5">
+                    ID #<%= item.product.id %><%= " · UPC: #{item.product.upc}" if item.product.upc %>
+                  </p>
+                </div>
+                <p class="text-[13px] text-[#444955] pt-0.5"><%= item.quantity %> <%= item.unit %></p>
+                <p class="text-[13px] text-[#444955] pt-0.5">$<%= format("%.2f", item.unit_price) %></p>
+                <p class="text-[13px] text-[#777] pt-0.5"><%= item.delivery_fee ? "$#{format('%.2f', item.delivery_fee)}" : "—" %></p>
+                <p class="text-[13px] font-bold text-[#1f1f1f] pt-0.5">$<%= format("%.2f", item.extended_cost) %></p>
+              </div>
+              <div class="md:hidden px-4 py-3 bg-[#fbf9f6]">
+                <p class="text-[13px] font-bold text-[#444955] mb-1"><%= item.product.name %></p>
+                <p class="text-[11px] text-[#777] mb-2"><%= item.quantity %> <%= item.unit %> · $<%= format("%.2f", item.unit_price) %>/unit</p>
+                <div class="flex items-center justify-between">
+                  <p class="text-[11px] text-[#777]">Extended Cost</p>
+                  <p class="text-[13px] font-bold text-[#1f1f1f]">$<%= format("%.2f", item.extended_cost) %></p>
+                </div>
+              </div>
+              <% if item.delivery_schedule || item.order_note %>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 px-4 md:px-5 py-3 bg-[#fafafa] border-t border-[#f0f0f0]">
+                  <% if item.delivery_schedule %>
+                    <div>
+                      <p class="text-[11px] font-bold text-[#777] uppercase tracking-wide mb-1">Delivery Schedule</p>
+                      <p class="text-[12px] text-[#444955]"><%= item.delivery_schedule %></p>
+                    </div>
+                  <% end %>
+                  <% if item.order_note %>
+                    <div>
+                      <p class="text-[11px] font-bold text-[#777] uppercase tracking-wide mb-1">Order Note</p>
+                      <p class="text-[12px] text-[#444955] italic">"<%= item.order_note %>"</p>
+                    </div>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if @items_by_vendor.empty? %>
+        <div class="bg-white border border-[#e8e8e8] rounded-xl p-12 text-center mb-4">
+          <p class="text-[14px] font-bold text-[#444955]">No items on this purchase order</p>
+          <p class="text-[12px] text-[#777] mt-1">Add products to get started</p>
+          <%= link_to "+ Add Products", products_path,
+              class: "mt-4 inline-flex bg-[#28ba93] text-white text-[13px] font-bold rounded-full px-6 h-[36px] items-center hover:bg-[#22a882] transition-colors no-min-h" %>
+        </div>
+      <% else %>
+        <div class="<%= card_class %> overflow-hidden mb-8">
+          <% @items_by_vendor.each do |g| %>
+            <div class="flex items-center justify-between px-5 py-3 border-b border-[#f0f0f0]">
+              <span class="text-[13px] text-[#777]"><%= g[:vendor].name %> subtotal</span>
+              <span class="text-[13px] font-bold text-[#1f1f1f]">$<%= format("%.2f", g[:vendor_subtotal]) %></span>
+            </div>
+          <% end %>
+          <div class="flex items-center justify-between px-5 py-3 border-b border-[#f0f0f0]">
+            <span class="text-[13px] text-[#777]">Cureate Processing Fee (10%)</span>
+            <span class="text-[13px] font-bold text-[#1f1f1f]">$<%= format("%.2f", @processing_fee) %></span>
+          </div>
+          <div class="flex items-center justify-between px-5 py-4 bg-[#fafafa] rounded-b-xl">
+            <span class="text-[14px] font-bold text-[#1f1f1f]">Total Purchase Order Amount</span>
+            <span class="text-[20px] font-black text-[#1f1f1f]">$<%= format("%.2f", @total) %></span>
+          </div>
+        </div>
+      <% end %>
+
+    </div>
+  </div>
+</div>

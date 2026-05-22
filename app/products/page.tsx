@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { vendors } from "@/lib/data";
@@ -67,6 +67,14 @@ export default function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState("all-products");
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 50 });
+
+  // Pre-apply vendor filter from URL param (?vendor=vendorId)
+  useEffect(() => {
+    const vendorParam = new URLSearchParams(window.location.search).get("vendor");
+    if (vendorParam) {
+      setQuickFilters((prev) => ({ ...prev, vendor: [vendorParam] }));
+    }
+  }, []);
 
   // Build vendor options dynamically
   const vendorOptions = [

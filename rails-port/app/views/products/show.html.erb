@@ -1,0 +1,182 @@
+<% content_for :title, "#{@product.name} — #{@vendor.name}" %>
+<% rules = @vendor.order_rules || {} %>
+
+<div data-controller="product-detail"
+     data-product-detail-vendor-id-value="<%= @vendor.id %>"
+     data-product-detail-product-id-value="<%= @product.id %>"
+     data-product-detail-units-per-case-value="<%= rules[:units_per_case] || 1 %>"
+     data-product-detail-min-units-value="<%= rules[:min_units] || 1 %>"
+     data-product-detail-wholesale-unit-price-value="<%= @product.wholesale_unit_price %>"
+     class="flex h-screen overflow-hidden font-['Lato']">
+
+  <%= render "shared/sidebar" %>
+
+  <main class="flex-1 overflow-y-auto bg-white">
+
+    <%# Breadcrumb + cart %>
+    <div class="px-12 pt-6 pb-2 flex items-center justify-between">
+      <span class="text-[#777] text-[14px]">
+        <%= link_to "All Products", products_path, class: "hover:underline text-[#377b82]" %>
+        <span class="mx-1">/</span>
+        <a href="#" class="hover:underline text-[#377b82]"><%= @product.category %></a>
+        <% if @product.breadcrumb %>
+          <span class="mx-1">/</span>
+          <a href="#" class="hover:underline text-[#377b82]"><%= @product.breadcrumb %></a>
+        <% end %>
+      </span>
+      <%= render "shared/view_cart_button" %>
+    </div>
+
+    <%# Main grid %>
+    <div class="grid gap-16 px-12 py-8 max-w-6xl" style="grid-template-columns: 380px 1fr">
+
+      <%# Left: image + vendor summary %>
+      <div>
+        <div class="w-full rounded-xl flex items-center justify-center p-8 bg-[#f7f5ef]" style="height: 400px">
+          <% if @product.image %>
+            <img src="<%= @product.image %>" alt="<%= @product.name %>" class="w-full h-full object-contain mix-blend-multiply">
+          <% end %>
+        </div>
+        <div class="mt-6 flex items-center gap-3">
+          <img src="<%= @vendor.logo %>" alt="<%= @vendor.name %>"
+               class="w-[48px] h-[48px] rounded-full object-contain border border-[#e8e8e8]">
+          <div>
+            <p class="font-bold text-sm text-[#444955]"><%= @vendor.name %></p>
+            <p class="text-[#777] text-[14px]"><%= @vendor.location %></p>
+          </div>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <% @vendor.certifications.each do |cert| %>
+            <span class="inline-block border text-xs rounded-full px-3 py-1 border-[#377b82] text-[#377b82]"><%= cert %></span>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Right: details + order section %>
+      <div>
+        <h1 class="font-bold mb-2 text-[#1f1f1f] text-[35px]"><%= @product.name %></h1>
+        <p class="mb-4 text-[#777] text-[15px]">ID: #<%= @product.id %>&nbsp;&nbsp;|&nbsp;&nbsp;UPC: <%= @product.upc %></p>
+
+        <div class="border-t border-dashed border-[#e8e8e8] my-4"></div>
+
+        <p class="font-bold uppercase tracking-widest mb-3 text-[#777] text-[13px]">Product Details</p>
+        <div class="grid grid-cols-3 gap-y-4 gap-x-6 mb-4">
+          <%
+            details = [
+              { label: "Size",                  value: @product.size },
+              { label: "Wholesale Unit Price",  value: "$#{format('%.2f', @product.wholesale_unit_price)}" },
+              { label: "MSRP",                  value: @product.msrp ? "$#{format('%.2f', @product.msrp)}" : "—" },
+              { label: "Case Pack",             value: @product.case_pack&.to_s || "—" },
+              { label: "Wholesale Case Price",  value: @product.wholesale_case_price ? "$#{format('%.2f', @product.wholesale_case_price)}" : "—" },
+              { label: "Case Minimum",          value: @product.case_minimum&.to_s || "—" },
+            ]
+          %>
+          <% details.each do |d| %>
+            <div>
+              <p class="uppercase tracking-wide mb-1 text-[#777] text-[13px]"><%= d[:label] %></p>
+              <p class="font-bold text-[#444955] text-[16px]"><%= d[:value] %></p>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="border-t border-dashed border-[#e8e8e8] my-4"></div>
+        <p class="font-bold uppercase tracking-widest mb-2 text-[#777] text-[13px]">Storage & Shelf Life</p>
+        <div class="flex flex-col gap-0.5">
+          <% (@product.storage || "").split(",").map(&:strip).reject(&:empty?).each do |line| %>
+            <p class="text-[#444955] text-[16px]">• <%= line %></p>
+          <% end %>
+        </div>
+
+        <div class="border-t border-dashed border-[#e8e8e8] my-4"></div>
+        <p class="font-bold uppercase tracking-widest mb-2 text-[#777] text-[13px]">Allergen-Friendly</p>
+        <div class="flex flex-wrap gap-x-6 gap-y-1 mt-2">
+          <% @product.allergens.each do |allergen| %>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full inline-block shrink-0 bg-[#28ba93]"></span>
+              <span class="text-[#444955] text-[16px]"><%= allergen %></span>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="border-t border-dashed border-[#e8e8e8] my-4"></div>
+        <p class="font-bold uppercase tracking-widest mb-2 text-[#777] text-[13px]">Dietary Preferences</p>
+        <div class="flex gap-4 mt-2 flex-wrap">
+          <% @product.dietary.each do |pref| %>
+            <div class="flex flex-col items-center">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold bg-[#035257]">
+                <%= @product.dietary_abbr(pref) %>
+              </div>
+              <span class="text-center mt-1 text-[#444955] text-[14px]"><%= pref %></span>
+            </div>
+          <% end %>
+        </div>
+
+        <%# Order section %>
+        <div class="mt-8">
+          <div class="flex gap-3 rounded-xl p-4 mb-6 border bg-[#f7f5ef] border-[#e8e8e8]">
+            <span class="text-lg leading-none shrink-0 text-[#28ba93]">ⓘ</span>
+            <div>
+              <p class="font-bold mb-0.5 text-[#444955] text-[16px]">
+                Minimum order: <%= rules[:min_cases] %> cases (<%= rules[:min_units] %> units) across any <%= @vendor.name %> flavors
+              </p>
+              <p class="text-[#777] text-[14px]"><%= rules[:mix_and_match_note] %></p>
+            </div>
+          </div>
+
+          <%# Quantity selector row %>
+          <div class="flex items-center gap-4 mb-4">
+            <span class="font-bold uppercase mr-2 text-[#777] text-[14px]">QTY</span>
+            <div class="flex items-center border rounded-full overflow-hidden border-[#a1a4aa]">
+              <button data-action="click->product-detail#decrement"
+                      class="w-9 h-9 flex items-center justify-center text-lg font-bold transition-colors hover:bg-[#f7f5ef] text-[#444955] no-min-h">−</button>
+              <span data-product-detail-target="qty" class="w-12 text-center font-bold text-[#444955] text-[16px]">1</span>
+              <button data-action="click->product-detail#increment"
+                      class="w-9 h-9 flex items-center justify-center text-lg font-bold transition-colors hover:bg-[#f7f5ef] text-[#444955] no-min-h">+</button>
+            </div>
+            <div class="flex gap-2 ml-1">
+              <button data-action="click->product-detail#setUnits" data-product-detail-target="unitsButton"
+                      class="bg-[#035257] text-white rounded-full px-4 py-2 cursor-pointer transition-colors text-[14px] no-min-h">Units</button>
+              <button data-action="click->product-detail#setCases" data-product-detail-target="casesButton"
+                      class="border border-[#a1a4aa] text-[#444955] rounded-full px-4 py-2 cursor-pointer transition-colors text-[14px] no-min-h">Cases</button>
+            </div>
+            <div class="ml-auto text-right">
+              <p class="text-lg font-bold leading-tight text-[#1f1f1f]" data-product-detail-target="totalPrice">$<%= format("%.2f", @product.wholesale_unit_price) %></p>
+              <p class="text-[#777] text-[14px]" data-product-detail-target="totalUnits">1 unit × $<%= format("%.2f", @product.wholesale_unit_price) %></p>
+            </div>
+          </div>
+
+          <%# Progress bar %>
+          <div class="mb-6">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-[#777]">Order progress</span>
+              <span data-product-detail-target="progressLabel" class="text-[#777]">1 / <%= rules[:min_units] %> units min</span>
+            </div>
+            <div class="w-full h-2 rounded-full overflow-hidden bg-[#e8e8e8]">
+              <div data-product-detail-target="progressBar"
+                   class="h-full rounded-full transition-all duration-300 ease-out"
+                   style="width: <%= [(1.0 / (rules[:min_units] || 1)) * 100, 100].min %>%; background-color: #377b82;"></div>
+            </div>
+            <p data-product-detail-target="progressLeft" class="mt-1.5 text-[#777] text-[14px]">
+              Add <%= (rules[:min_units] || 1) - 1 %> more units to meet the minimum
+            </p>
+          </div>
+
+          <button data-action="click->product-detail#add"
+                  data-product-detail-target="addButton"
+                  class="w-full text-white rounded-full py-4 font-bold flex items-center justify-center gap-2 transition-opacity text-[16px] no-min-h"
+                  style="background-color: #c0c0c0; cursor: not-allowed">
+            ＋ Add to Order
+          </button>
+          <p data-product-detail-target="addButtonHint" class="text-center mt-2 text-[#777] text-[14px]">Meet the minimum order to continue</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <%# Toast %>
+  <div data-product-detail-target="toast"
+       data-transition="fade"
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 text-white text-sm px-6 py-3 rounded-full shadow-lg z-50 whitespace-nowrap bg-[#28ba93]">
+    Added to order ✓
+  </div>
+</div>

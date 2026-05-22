@@ -22,7 +22,6 @@ type NavLink = {
 
 const NAV_LINKS: NavLink[] = [
   { label: 'Dashboard',       icon: '/icon_dashboard.svg',        href: '/' },
-  { label: 'Buyers',          icon: '/icon_buyers.svg',            href: '#' },
   { label: 'Vendors',         icon: '/icon_vendors.svg',           href: '/vendors' },
   { label: 'All Orders',      icon: '/icon_all_orders.svg',        href: '#' },
   {
@@ -35,7 +34,6 @@ const NAV_LINKS: NavLink[] = [
     ],
   },
   { label: 'Products',        icon: '/icon_products.svg',          href: '/products' },
-  { label: 'Categories',      icon: '/icon_categories.svg',        href: '#' },
   { label: 'Requests',        icon: '/icon_requests.svg',          href: '#' },
 ]
 

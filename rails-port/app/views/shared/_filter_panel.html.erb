@@ -1,0 +1,109 @@
+<%#
+  FilterPanel — slide-in left on desktop, bottom sheet on mobile.
+  Driven by filter_panel_controller; sections rendered from @filter_advanced (Hash{section => filters}).
+%>
+<div data-controller="filter-panel">
+  <%# Backdrop %>
+  <div data-filter-panel-target="backdrop"
+       data-action="click->filter-panel#close"
+       data-transition="fade"
+       class="fixed inset-0 bg-black/40 z-[70]"></div>
+
+  <%# Panel %>
+  <div data-filter-panel-target="panel"
+       class="fixed z-[80] bg-white overflow-hidden flex-col inset-0 md:inset-y-0 md:left-0 md:right-auto md:w-[380px] md:shadow-[4px_0_24px_rgba(0,0,0,0.1)] hidden">
+
+    <%# Header %>
+    <div class="flex items-center justify-between px-5 py-4 border-b border-[#e8e8e8] shrink-0">
+      <div class="flex items-center gap-2">
+        <h2 class="text-[18px] font-black text-[#1f1f1f]">Filters</h2>
+        <span data-filter-panel-target="activeCount" class="hidden bg-[#28ba93] text-white text-[11px] font-bold rounded-full w-5 h-5 items-center justify-center">0</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button data-action="click->filter-panel#clearAll"
+                data-filter-panel-target="clearButton"
+                class="text-[12px] text-[#035257] font-bold hover:underline hidden no-min-h">Clear all</button>
+        <button data-action="click->filter-panel#close" class="w-9 h-9 flex items-center justify-center rounded-full transition-colors no-min-h">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 1l12 12M13 1L1 13" stroke="#1f1f1f" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <%# Scrollable filter content %>
+    <div class="flex-1 overflow-y-auto">
+      <% @filter_advanced.each do |section, filters| %>
+        <div class="px-5 pt-5 pb-2">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-[#a1a4aa]"><%= section %></p>
+        </div>
+        <% filters.each do |filter| %>
+          <div class="px-5 mb-4" data-controller="disclose"
+               data-disclose-open-value="<%= !filter[:collapsed_by_default] %>">
+            <button data-action="click->disclose#toggle"
+                    class="w-full flex items-center justify-between mb-2 no-min-h">
+              <div class="flex items-center gap-2">
+                <span class="text-[13px] font-bold text-[#1f1f1f]"><%= filter[:label] %></span>
+                <span data-filter-panel-target="groupCount"
+                      data-filter-id="<%= filter[:id] %>"
+                      class="hidden bg-[#035257] text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">0</span>
+              </div>
+              <span data-disclose-target="caret"
+                    class="text-[#a1a4aa] text-[10px] transition-transform duration-200 <%= 'rotate-180' unless filter[:collapsed_by_default] %>">▾</span>
+            </button>
+
+            <div data-disclose-target="body"
+                 class="overflow-hidden <%= 'hidden' if filter[:collapsed_by_default] %>">
+              <% if filter[:control] == "checkbox-group" %>
+                <div class="flex flex-col gap-1">
+                  <% (filter[:options] || []).each do |opt| %>
+                    <label class="flex items-center gap-2.5 py-1 cursor-pointer group">
+                      <input type="checkbox"
+                             data-action="change->filter-panel#toggleCheckbox"
+                             data-filter-id="<%= filter[:id] %>"
+                             data-option-id="<%= opt[:id] %>"
+                             class="filter-panel-checkbox hidden">
+                      <div data-checkbox-box class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all border-[#a1a4aa] group-hover:border-[#28ba93]">
+                        <span data-checkbox-check class="hidden text-white text-[10px] leading-none">✓</span>
+                      </div>
+                      <span class="text-[13px] transition-colors text-[#444955] group-hover:text-[#1f1f1f]"><%= opt[:label] %></span>
+                    </label>
+                  <% end %>
+                </div>
+              <% elsif filter[:control] == "range" %>
+                <div class="pt-1 pb-2">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-[12px] text-[#777]">$<span data-filter-panel-target="priceMin">0.00</span></span>
+                    <span class="text-[12px] text-[#777]">$<span data-filter-panel-target="priceMax">50.00</span></span>
+                  </div>
+                  <div class="relative h-6 flex items-center">
+                    <div class="h-1.5 bg-[#e8e8e8] rounded-full w-full relative">
+                      <div data-filter-panel-target="priceTrack" class="absolute h-full bg-[#28ba93] rounded-full" style="left: 0%; right: 0%;"></div>
+                    </div>
+                    <input type="range" min="0" max="50" step="0.5" value="0"
+                           data-filter-panel-target="priceMinInput"
+                           data-action="input->filter-panel#priceChange"
+                           class="absolute inset-0 w-full opacity-0 cursor-pointer">
+                    <input type="range" min="0" max="50" step="0.5" value="50"
+                           data-filter-panel-target="priceMaxInput"
+                           data-action="input->filter-panel#priceChange"
+                           class="absolute inset-0 w-full opacity-0 cursor-pointer">
+                  </div>
+                  <p class="text-[11px] text-[#a1a4aa] mt-2 text-center">Drag to set price range</p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%# Apply CTA %>
+    <div class="shrink-0 px-5 py-4 border-t border-[#e8e8e8] bg-white">
+      <button data-action="click->filter-panel#close"
+              class="w-full h-[52px] bg-[#28ba93] text-white font-bold text-[15px] rounded-full hover:bg-[#22a882] transition-colors no-min-h">
+        Apply Filters<span data-filter-panel-target="applyCount"></span>
+      </button>
+    </div>
+  </div>
+</div>

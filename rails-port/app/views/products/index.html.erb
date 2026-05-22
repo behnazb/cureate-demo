@@ -1,0 +1,110 @@
+<% content_for :title, "All Products — Cureate Connect" %>
+
+<%
+  # Build a JSON product list for client-side filtering. Each row includes everything the
+  # products_page_controller needs to decide whether the product should be visible.
+  product_payload = @all_products.map do |p|
+    {
+      id:         p.id,
+      vendor_id:  p.vendor.id,
+      vendor_name: p.vendor.name,
+      vendor_certifications: p.vendor.certifications || [],
+      name:       p.name,
+      image:      p.image,
+      size:       p.size,
+      case_pack:  p.case_pack,
+      category:   p.category,
+      dietary:    p.dietary || [],
+      allergens:  p.allergens || [],
+      wholesale_unit_price: p.wholesale_unit_price,
+      wholesale_case_price: p.wholesale_case_price,
+      href:       vendor_product_path(p.vendor.id, p.id),
+    }
+  end
+%>
+
+<div data-controller="products-page"
+     data-products-page-preselected-vendor-value="<%= @preselected_vendor %>"
+     data-products-page-products-value="<%= product_payload.to_json %>"
+     class="flex flex-1 min-h-0 overflow-hidden font-['Lato']">
+
+  <%= render "shared/sidebar" %>
+
+  <main class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+    <header class="hidden md:flex items-center justify-between bg-white px-9 py-4 border-b border-[#e8e8e8] shrink-0 sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <h1 class="text-[20px] font-bold text-[#1f1f1f] whitespace-nowrap shrink-0">All Products</h1>
+        <div class="h-[38px] flex items-center min-w-[280px] max-w-[340px]">
+          <%= render "shared/search_bar" %>
+        </div>
+      </div>
+      <%= render "shared/view_cart_button" %>
+    </header>
+
+    <%# Filter row %>
+    <div class="bg-white px-4 md:px-9 py-2 flex items-center justify-between gap-3 shrink-0 overflow-x-auto scrollbar-none">
+      <div class="flex items-center gap-1.5 shrink-0">
+        <span class="text-[13px] font-bold text-[#1f1f1f] shrink-0">Filter by</span>
+        <% @filter_quick.each do |filter| %>
+          <%= render "shared/filter_dropdown", filter: filter %>
+        <% end %>
+        <button data-action="click->products-page#clearAll"
+                data-products-page-target="clearAllButton"
+                class="no-min-h text-[11px] font-bold transition-colors shrink-0 hidden items-center gap-1 text-[#a1a4aa] hover:text-[#444955]">
+          ✕ Clear all
+        </button>
+      </div>
+      <%= render "shared/view_toggle" %>
+    </div>
+
+    <%# Category pills row %>
+    <div class="bg-white px-4 md:px-9 py-1 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+      <button data-action="click->products-page#openFilterPanel"
+              data-products-page-target="filterPanelTrigger"
+              class="no-min-h flex items-center gap-1.5 rounded-full px-3 border text-[12px] font-bold shrink-0 transition-colors border-[#a1a4aa] text-[#444955] hover:border-[#777]"
+              style="height: 26px">
+        <svg width="12" height="11" viewBox="0 0 12 11" fill="none">
+          <path d="M1 1.5h10M3 5.5h6M5 9.5h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Filters
+        <span data-products-page-target="advancedCount" class="hidden bg-white/30 rounded-full w-4 h-4 items-center justify-center text-[10px]">0</span>
+      </button>
+
+      <% @category_pills.each do |pill| %>
+        <button data-action="click->products-page#selectCategory"
+                data-pill-id="<%= pill[:id] %>"
+                data-products-page-target="categoryPill"
+                class="<%= pill[:id] == 'all-products' ? 'category-pill-active bg-[#1f1f1f] text-white border-[#1f1f1f]' : 'bg-white text-[#444955] border-[#a1a4aa] hover:border-[#777]' %> no-min-h rounded-full px-3 border text-[12px] font-bold shrink-0 transition-all"
+                style="height: 26px">
+          <%= pill[:label] %>
+        </button>
+      <% end %>
+    </div>
+
+    <%# Scrollable product area — content rendered by products_page_controller %>
+    <div class="flex-1 overflow-y-auto bg-white">
+
+      <%# GRID VIEW (default) %>
+      <div data-products-page-target="gridView" class="flex flex-col pb-8"></div>
+
+      <%# LIST VIEW %>
+      <div data-products-page-target="listView" class="hidden flex-col gap-3 px-4 md:px-9 py-4 md:py-8"></div>
+
+      <%# Empty state %>
+      <div data-products-page-target="emptyState" class="hidden flex-col items-center justify-center py-24 text-center px-4">
+        <div class="w-16 h-16 rounded-full bg-[#f7f5ef] flex items-center justify-center mb-4">
+          <img src="/icons/icon_search.svg" class="w-8 h-8 opacity-30" alt="">
+        </div>
+        <p class="font-bold text-[#444955] text-[20px]">No products match your filters</p>
+        <p class="mt-1 text-[#777] text-[16px]">Try adjusting or clearing your filters</p>
+        <button data-action="click->products-page#clearAll"
+                class="mt-4 bg-[#28ba93] text-white font-bold rounded-full px-6 py-2.5 text-[16px] no-min-h">Clear all filters</button>
+      </div>
+    </div>
+
+  </main>
+
+  <%# Filter Panel %>
+  <%= render "shared/filter_panel" %>
+</div>

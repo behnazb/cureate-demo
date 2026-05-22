@@ -1,0 +1,100 @@
+<%#
+  Mobile nav — sticky top bar + slide-out drawer.
+  Controlled by mobile_nav_controller; cart badge listens to cart:changed.
+  Hidden on md+ via CSS.
+%>
+<div data-controller="mobile-nav"
+     data-mobile-nav-on-po-route-value="<%= request.path.start_with?('/purchase-orders') %>">
+
+  <%# Sticky top bar %>
+  <header class="md:hidden sticky top-0 z-40 bg-[#1f1f1f] border-b border-[#333] shrink-0">
+    <div class="flex items-center justify-between px-5 py-3">
+      <button data-action="click->mobile-nav#openDrawer"
+              class="no-min-h w-8 h-8 flex flex-col justify-center gap-[5px] shrink-0"
+              aria-label="Open menu">
+        <span class="block h-[2px] w-6 bg-white rounded-full"></span>
+        <span class="block h-[2px] w-6 bg-white rounded-full"></span>
+        <span class="block h-[2px] w-4 bg-white rounded-full"></span>
+      </button>
+
+      <%= link_to products_path, class: "flex items-center gap-2 no-min-h" do %>
+        <img src="/cureate-logo.svg" alt="Cureate Connect" class="h-[32px] w-auto">
+      <% end %>
+
+      <% if request.path.start_with?("/purchase-orders") %>
+        <div class="w-8 shrink-0"></div>
+      <% else %>
+        <button data-action="click->mobile-nav#openCart"
+                data-mobile-nav-target="cartButton"
+                class="no-min-h w-8 h-8 flex items-center justify-center bg-[#28ba93] rounded-full relative shrink-0"
+                aria-label="View cart">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
+                  stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="3" y1="6" x2="21" y2="6" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 10a4 4 0 01-8 0" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span data-mobile-nav-target="badge"
+                class="hidden absolute -top-1 -right-1 w-4 h-4 bg-white text-[#1f1f1f] text-[9px] font-black rounded-full items-center justify-center">0</span>
+        </button>
+      <% end %>
+    </div>
+  </header>
+
+  <%# Backdrop %>
+  <div data-mobile-nav-target="backdrop"
+       data-action="click->mobile-nav#closeDrawer"
+       data-transition="fade"
+       class="md:hidden fixed inset-0 bg-black/50 z-50"></div>
+
+  <%# Drawer %>
+  <aside data-mobile-nav-target="drawer"
+         data-transition="slide-in-left"
+         class="md:hidden fixed top-0 left-0 h-full w-[280px] bg-[#1f1f1f] z-50 flex flex-col">
+
+    <div class="flex items-center justify-between px-5 py-4 border-b border-[#333]">
+      <%= link_to products_path, data: { action: "click->mobile-nav#closeDrawer" }, class: "no-min-h" do %>
+        <img src="/cureate-logo.svg" alt="Cureate Connect" class="h-[28px] w-auto">
+      <% end %>
+      <button data-action="click->mobile-nav#closeDrawer"
+              class="no-min-h w-8 h-8 flex items-center justify-center text-[#777] hover:text-white transition-colors">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto py-4">
+      <%
+        items = [
+          { label: "Dashboard",       href: "/dashboard" },
+          { label: "Products",        href: products_path },
+          { label: "Purchase Orders", href: purchase_orders_path },
+          { label: "Vendors",         href: vendors_path },
+          { label: "Requests",        href: "/requests" },
+        ]
+      %>
+      <% items.each do |item| %>
+        <% active = request.path.start_with?(item[:href]) %>
+        <%= link_to item[:href],
+            data: { action: "click->mobile-nav#closeDrawer" },
+            class: "flex items-center justify-between px-5 py-3 text-[15px] transition-colors no-min-h #{active ? 'bg-[#363636] text-white font-bold' : 'text-[#aaa] hover:text-white hover:bg-[#2a2a2a]'}" do %>
+          <%= item[:label] %>
+          <% if item[:label] == "Purchase Orders" %>
+            <span class="text-[11px] text-[#28ba93] font-bold">Drafts · Submitted</span>
+          <% end %>
+        <% end %>
+      <% end %>
+    </nav>
+
+    <div class="px-5 py-4 border-t border-[#333]">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-[#363636] flex items-center justify-center text-[12px] font-bold text-white shrink-0">N</div>
+        <div>
+          <p class="text-[13px] font-bold text-white">Johns Hopkins University</p>
+          <p class="text-[11px] text-[#777]">buyer@jhu.edu</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>

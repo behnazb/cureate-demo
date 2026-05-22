@@ -1,0 +1,28 @@
+<%#
+  Locals:
+    items — Array of Hash{ label:, icon:, danger:, action: }
+  action: a string event name dispatched on click (e.g. "po:duplicate"); detail includes whatever you pass via data-action-detail.
+  In production, wire up the action handler to your controller, or pass server-side URLs and use <a href> instead.
+%>
+<div data-controller="po-dropdown-menu" class="relative" data-action="click->po-dropdown-menu#stop">
+  <button data-action="click->po-dropdown-menu#toggle"
+          class="no-min-h w-7 h-7 rounded-full hover:bg-[#f0f0f0] flex items-center justify-center text-[#777] transition-colors text-[14px] tracking-wider">
+    ···
+  </button>
+
+  <div data-po-dropdown-menu-target="menu"
+       data-transition="fade-down"
+       class="absolute right-0 top-9 bg-white border border-[#e8e8e8] rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.08)] z-50 overflow-hidden min-w-[200px]">
+    <% items.each do |item| %>
+      <button data-action="click->po-dropdown-menu#dispatch"
+              data-action-name="<%= item[:action] %>"
+              data-action-detail="<%= (item[:detail] || {}).to_json %>"
+              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] transition-colors border-b border-[#f0f0f0] last:border-0 <%= item[:danger] ? 'text-[#a33500] hover:bg-[#fff5f2]' : 'text-[#444955] hover:bg-[#f7f5ef]' %>">
+        <span class="<%= item[:danger] ? 'text-[#a33500]' : 'text-[#777]' %>">
+          <%= render "shared/po_dropdown_icon", icon: item[:icon] %>
+        </span>
+        <%= item[:label] %>
+      </button>
+    <% end %>
+  </div>
+</div>

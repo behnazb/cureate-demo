@@ -1,0 +1,15 @@
+# Merge these into your existing Gemfile — do NOT use this file as-is.
+# Rails / Hotwire / Tailwind stack assumed by the rails-port:
+
+# gem "rails", "~> 7.1"
+
+# Hotwire (Stimulus + Turbo)
+gem "turbo-rails"
+gem "stimulus-rails"
+
+# Tailwind 4 — pick ONE of these depending on how your production app builds CSS:
+gem "tailwindcss-rails"     # Standalone Tailwind binary, no Node required.
+# gem "cssbundling-rails"   # …or use Node-bundled Tailwind (esbuild/webpack/rollup).
+
+# Importmap (default Rails 7+ JS); skip if you use jsbundling-rails instead.
+gem "importmap-rails"

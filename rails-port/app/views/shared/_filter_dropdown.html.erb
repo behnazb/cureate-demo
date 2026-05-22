@@ -1,0 +1,44 @@
+<%#
+  Locals:
+    filter — Hash from FilterConfig.quick_with_vendors (id, label, default_label, selection, options)
+  Selected state is held client-side in filter_dropdown_controller (and synced to products_page).
+%>
+<div data-controller="filter-dropdown"
+     data-filter-dropdown-filter-id-value="<%= filter[:id] %>"
+     data-filter-dropdown-selection-value="<%= filter[:selection] %>"
+     data-filter-dropdown-default-label-value="<%= filter[:default_label] %>"
+     class="relative shrink-0">
+
+  <button data-filter-dropdown-target="trigger"
+          data-action="click->filter-dropdown#toggle"
+          class="flex items-center gap-1.5 h-[30px] rounded-full px-3 text-[13px] font-bold transition-all duration-150 whitespace-nowrap bg-white text-[#377b82] hover:bg-[#f0fafa]">
+    <span data-filter-dropdown-target="label"><%= filter[:default_label] %></span>
+    <span data-filter-dropdown-target="count" class="hidden bg-white/30 rounded-full w-4 h-4 items-center justify-center text-[10px]">0</span>
+    <span data-filter-dropdown-target="caret" class="text-[8px] transition-transform duration-200">▾</span>
+  </button>
+
+  <div data-filter-dropdown-target="menu"
+       data-transition="fade-down"
+       class="absolute top-[36px] left-0 bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-[#e8e8e8] z-[200] min-w-[180px] overflow-hidden">
+    <% (filter[:options] || []).each do |opt| %>
+      <button data-filter-dropdown-target="option"
+              data-option-id="<%= opt[:id] %>"
+              data-action="click->filter-dropdown#select"
+              class="w-full flex items-center justify-between px-4 py-2.5 text-left text-[12px] transition-colors hover:bg-[#f7f5ef] text-[#444955]">
+        <span><%= opt[:label] %></span>
+        <% if filter[:selection] == "multiple" %>
+          <span class="checkbox w-4 h-4 rounded border flex items-center justify-center shrink-0 ml-3 border-[#a1a4aa]">
+            <img src="/icons/icon_check.svg" alt="" class="check w-[10px] h-[10px] hidden" style="filter: brightness(0) invert(1)">
+          </span>
+        <% end %>
+      </button>
+    <% end %>
+    <div data-filter-dropdown-target="clearRow" class="hidden">
+      <div class="border-t border-[#f0f0f0] mx-3"></div>
+      <button data-action="click->filter-dropdown#clear"
+              class="w-full px-4 py-2.5 text-left text-[11px] text-[#a1a4aa] hover:text-[#444955] transition-colors">
+        Clear selection
+      </button>
+    </div>
+  </div>
+</div>
