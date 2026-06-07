@@ -2,7 +2,7 @@
   Locals: product, vendor (only id + name needed)
   Quantity badge / stepper handled inline (mirrors ProductCard.tsx layout).
 %>
-<% next nil if product.shipping_fee? || product.image.blank? %>
+<% return if product.shipping_fee? || product.image.blank? %>
 <% qty_class_id = "product-card-#{vendor.id}-#{product.id}" %>
 
 <%= link_to vendor_product_path(vendor.id, product.id),
