@@ -301,9 +301,9 @@ export default class extends Controller {
       </div>`).join("")
 
     return `<div class="bg-white flex flex-col" style="border-radius: 20px; box-shadow: 2px 2px 10px 0px rgba(156,153,153,0.25);">
-      <div class="flex items-center justify-between px-4 py-3">
+      <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3">
         <span class="font-bold text-[#777] text-[14px]">${g.vendor.name}</span>
-        <a href="/vendors/${g.vendor.id}" class="text-[12px] font-bold text-[#28ba93] hover:underline whitespace-nowrap no-min-h">Add more</a>
+        <a href="/vendors/${g.vendor.id}" class="text-[11px] font-bold text-[#28ba93] hover:underline whitespace-nowrap no-min-h">Add more from ${g.vendor.name}</a>
       </div>
       <div class="flex items-center gap-3 px-4 pb-4">
         ${status}
