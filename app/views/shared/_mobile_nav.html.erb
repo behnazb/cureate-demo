@@ -80,9 +80,6 @@
             data: { action: "click->mobile-nav#closeDrawer" },
             class: "flex items-center justify-between px-5 py-3 text-[15px] transition-colors no-min-h #{active ? 'bg-[#363636] text-white font-bold' : 'text-[#aaa] hover:text-white hover:bg-[#2a2a2a]'}" do %>
           <%= item[:label] %>
-          <% if item[:label] == "Purchase Orders" %>
-            <span class="text-[11px] text-[#28ba93] font-bold">Drafts · Submitted</span>
-          <% end %>
         <% end %>
       <% end %>
     </nav>
