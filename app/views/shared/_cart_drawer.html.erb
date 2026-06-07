@@ -2,6 +2,10 @@
   CartDrawer — ported from components/CartDrawer.tsx.
   All cart state lives in cart_controller (singleton on <body>); this drawer reflects it.
   Three views (cart / confirmation / success) are layered; the controller flips data-view.
+
+  T01: the cart leads with the delivery week (the buyer's mental model). The PO# is
+  auto-assigned by the system and shown only as secondary metadata — there is no
+  "create / assign / merge PO" UI.
 %>
 <%
   # Seed data for the recently purchased strip (mirrors the React const).
@@ -19,7 +23,7 @@
     { vendor: v, product: p }
   }.compact
 
-  # Serialize all vendors + products + draft POs the drawer needs.
+  # Serialize all vendors + products the drawer needs.
   # This lets the controller render vendor groups + product details without re-fetching.
   vendor_payload = Vendor.all.map do |v|
     {
@@ -37,15 +41,10 @@
       }.compact,
     }
   end
-
-  draft_pos_payload = PurchaseOrder.all
-    .select(&:draft?)
-    .map { |po| { id: po.id, delivery_date_short: po.delivery_date_short } }
 %>
 
 <div data-controller="cart-drawer"
-     data-cart-drawer-vendors-value="<%= vendor_payload.to_json %>"
-     data-cart-drawer-draft-pos-value="<%= draft_pos_payload.to_json %>">
+     data-cart-drawer-vendors-value="<%= vendor_payload.to_json %>">
 
   <%# Backdrop — desktop only %>
   <div data-cart-drawer-target="backdrop"
@@ -84,81 +83,22 @@
           </button>
         </div>
 
-        <%# Staging mode — assign to PO (shown when no active PO + items) %>
-        <div data-cart-drawer-target="stagingPanel"
-             class="hidden border-b-2 shrink-0 px-4 py-3 border-[#e6e6e6] bg-[#fafafa]">
-          <p class="text-[13px] font-bold text-[#1f1f1f] mb-1">Assign to a Purchase Order</p>
-          <p class="text-[11px] mb-3 text-[#777]">Select an existing Draft PO or create a new one to save these items.</p>
-          <div data-cart-drawer-target="draftPoList"></div>
-          <button data-action="click->cart-drawer#createNewDraftPO"
-                  class="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#28ba93] text-white rounded-xl hover:bg-[#22a882] transition-colors font-bold text-[13px] mt-2 no-min-h">
-            + Create New Draft PO
-          </button>
-        </div>
-
-        <%# Normal mode — PO selector %>
-        <div data-cart-drawer-target="poSelector"
-             class="border-b-2 shrink-0 border-[#e6e6e6]">
-          <button data-action="click->cart-drawer#togglePOSelector"
-                  class="flex items-center gap-2 w-full px-4 text-left h-[50px] no-min-h">
-            <span class="font-bold text-[#1f1f1f] text-[14px]">Added to Draft PO</span>
-            <span data-cart-drawer-target="poId" class="font-bold text-[#377b82] text-[14px]"></span>
-            <span data-cart-drawer-target="poDelivery" class="ml-auto mr-1 text-[11px] text-[#777]"></span>
-            <svg data-cart-drawer-target="poCaret" viewBox="0 0 7 4" fill="none" class="w-[7px] h-[4px] transition-transform duration-200">
-              <path d="M1 1l2.5 2L6 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-
-          <div data-cart-drawer-target="poDropdown" class="hidden overflow-hidden px-4 pb-4">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-[11px] font-bold text-[#1f1f1f]">Recent Open Purchase Orders</span>
-              <button data-action="click->cart-drawer#showNewPOInput"
-                      class="flex items-center gap-1.5 bg-[#beead8] hover:bg-[#a8dcc4] transition-colors rounded-full h-[26px] px-3 text-[11px] font-bold text-[#035257] no-min-h">
-                Add New
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                  <path d="M5.5 1v9M1 5.5h9" stroke="#035257" stroke-width="1.5" stroke-linecap="round"/>
+        <%# Lead: delivery week (primary) + auto-assigned PO# (secondary metadata) %>
+        <div class="border-b-2 shrink-0 border-[#e6e6e6]">
+          <div data-cart-drawer-target="deliveryBanner" class="px-4 py-3">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[12px] text-[#777]">Ordering for delivery week of</span>
+              <span data-cart-drawer-target="weekLabel" class="text-[14px] font-bold text-[#1f1f1f]"></span>
+              <span data-cart-drawer-target="repeatLabel" class="text-[11px] font-bold text-[#28ba93] hidden"></span>
+              <button data-action="click->cart-drawer#showDeliveryEditor"
+                      aria-label="Change delivery week"
+                      class="ml-1 flex items-center justify-center hover:opacity-70 transition-opacity text-[#28ba93] no-min-h">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M7.5 2l2.5 2.5L4 10.5H1.5V8L7.5 2z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
             </div>
-
-            <%# New PO input (toggled) %>
-            <div data-cart-drawer-target="newPOInputWrapper" class="hidden mb-3">
-              <div class="flex items-center gap-2 py-1">
-                <div class="w-4 h-4 rounded-[2px] border-2 border-dashed border-[#28ba93] shrink-0"></div>
-                <div class="flex-1 relative">
-                  <input data-cart-drawer-target="newPOInput"
-                         data-action="keydown->cart-drawer#newPOKeyDown"
-                         type="text" maxlength="30"
-                         placeholder="e.g. 007-MARKET-00001"
-                         class="w-full h-[26px] text-[11px] font-bold text-[#377b82] bg-transparent border-b-2 border-[#28ba93] outline-none placeholder-[#a1a4aa]">
-                </div>
-              </div>
-              <p data-cart-drawer-target="newPOError" class="text-[10px] text-red-400 mt-1 ml-6 hidden"></p>
-              <div class="flex items-center gap-2 mt-2 ml-6">
-                <button data-action="click->cart-drawer#saveNewPO"
-                        class="h-[24px] px-3 rounded-full text-[11px] font-bold bg-[#28ba93] text-white hover:bg-[#22a882] transition-all no-min-h">Save</button>
-                <button data-action="click->cart-drawer#cancelNewPO"
-                        class="h-[24px] px-3 rounded-full text-[11px] font-bold text-[#777] hover:text-[#444955] transition-colors no-min-h">Cancel</button>
-              </div>
-            </div>
-
-            <%# PO list (rendered by controller) %>
-            <div data-cart-drawer-target="poList" class="flex flex-col gap-0.5"></div>
-          </div>
-        </div>
-
-        <%# Ordering window banner / editor %>
-        <div class="border-b-2 shrink-0 border-[#e6e6e6]">
-          <div data-cart-drawer-target="deliveryBanner" class="flex items-center gap-2 px-4 py-2.5">
-            <span class="text-[12px] text-[#777]">Ordering for:</span>
-            <span data-cart-drawer-target="weekLabel" class="text-[12px] font-bold text-[#1f1f1f]"></span>
-            <span data-cart-drawer-target="repeatLabel" class="text-[11px] font-bold text-[#28ba93] hidden"></span>
-            <button data-action="click->cart-drawer#showDeliveryEditor"
-                    class="ml-1 flex items-center justify-center hover:opacity-70 transition-opacity text-[#28ba93] no-min-h">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M7.5 2l2.5 2.5L4 10.5H1.5V8L7.5 2z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
+            <p data-cart-drawer-target="poMeta" class="mt-1 text-[11px] text-[#777] hidden"></p>
           </div>
 
           <div data-cart-drawer-target="deliveryEditor" class="hidden px-4 py-3">
@@ -224,33 +164,6 @@
                 </div>
               <% end %>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <%# Discard prompt overlay %>
-      <div data-cart-drawer-target="discardPrompt"
-           data-transition="fade"
-           class="absolute inset-0 z-20 flex flex-col items-center justify-center px-8"
-           style="background-color: rgba(247,245,239,0.97)">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-[340px] flex flex-col items-center gap-4 text-center shadow-[0_4px_24px_rgba(0,0,0,0.12)]">
-          <div class="w-10 h-10 rounded-full bg-[#fff3cd] flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 6v5M10 14h.01" stroke="#b45309" stroke-width="1.8" stroke-linecap="round"/>
-              <circle cx="10" cy="10" r="8.5" stroke="#b45309" stroke-width="1.5"/>
-            </svg>
-          </div>
-          <div>
-            <p class="text-[15px] font-bold text-[#1f1f1f] mb-1">Discard staged items?</p>
-            <p class="text-[13px] text-[#777] leading-snug">
-              You have <span data-cart-drawer-target="discardCount">0</span> items that haven't been assigned to a Purchase Order. They'll be lost if you close.
-            </p>
-          </div>
-          <div class="flex flex-col gap-2 w-full">
-            <button data-action="click->cart-drawer#hideDiscardPrompt"
-                    class="w-full h-[42px] rounded-full font-bold text-[14px] bg-[#28ba93] text-white hover:bg-[#22a882] transition-colors no-min-h">Keep shopping</button>
-            <button data-action="click->cart-drawer#confirmDiscard"
-                    class="w-full h-[42px] rounded-full font-bold text-[14px] border border-[#e6e6e6] text-[#777] hover:bg-[#f7f5ef] transition-colors no-min-h">Discard items</button>
           </div>
         </div>
       </div>

@@ -2,37 +2,37 @@ import { Controller } from "@hotwired/stimulus"
 import { findCartController } from "./cart_controller"
 
 // cart_drawer_controller — three-view drawer (cart, confirmation, success).
-// Reflects cart_controller state via the cart:* event bus.
+//
+// T01: the cart leads with the delivery week (the buyer's mental model). The PO#
+// is auto-assigned by the system and shown only as secondary metadata — there is
+// no "create / assign / merge PO" UI. Switching weeks via the picker surfaces (or
+// auto-creates) that week's draft.
 export default class extends Controller {
   static targets = [
     "panel", "backdrop",
     "cartView", "confirmationView", "successView",
-    "stagingPanel", "draftPoList",
-    "poSelector", "poId", "poDelivery", "poCaret", "poDropdown",
-    "newPOInputWrapper", "newPOInput", "newPOError", "poList",
-    "deliveryBanner", "deliveryEditor", "weekLabel", "repeatLabel", "weekSelect", "repeatSelect",
+    "deliveryBanner", "weekLabel", "poMeta", "repeatLabel",
+    "deliveryEditor", "weekSelect", "repeatSelect",
     "emptyState", "vendorGroups", "subtotalBlock", "subtotal", "progressBar", "minStatus",
     "savedIndicator", "saveButton", "continueButton",
-    "discardPrompt", "discardCount",
     "confirmationPOId", "confirmationBody",
     "successPOId", "successVendors", "successProgress", "countdown",
   ]
-  static values = { vendors: Array, draftPos: Array }
+  static values = { vendors: Array }
 
   connect() {
     this.view = "cart"
-    this.poDropdownOpen = false
     this.deliveryEditorOpen = false
 
-    this.boundChanged    = () => this.#render()
-    this.boundToggle     = (e) => this.#syncOpen(e.detail.open)
-    this.boundPoChanged  = () => this.#render()
+    this.boundChanged   = () => this.#render()
+    this.boundToggle    = (e) => this.#syncOpen(e.detail.open)
+    this.boundPoChanged = () => this.#render()
 
     document.addEventListener("cart:changed",       this.boundChanged)
     document.addEventListener("cart:drawer-toggle", this.boundToggle)
     document.addEventListener("cart:po-changed",    this.boundPoChanged)
 
-    // Initial render — wait one tick for cart controller to be connected.
+    // Initial render — wait one tick for the cart controller to be connected.
     requestAnimationFrame(() => this.#render())
   }
   disconnect() {
@@ -41,16 +41,9 @@ export default class extends Controller {
     document.removeEventListener("cart:po-changed",    this.boundPoChanged)
   }
 
-  // ─── Open / Close ────────────────────────────────────────────────────────
+  // ─── Open / Close ──────────────────────────────────────────────────────────
   close() {
-    const cart = findCartController(this.application)
-    if (!cart) return
-    if (!cart.hasActivePO && cart.items.length > 0) {
-      this.discardCountTarget.textContent = cart.items.length
-      this.discardPromptTarget.dataset.open = "true"
-      return
-    }
-    cart.setDrawerOpen(false)
+    findCartController(this.application)?.setDrawerOpen(false)
     this.view = "cart"
     this.#switchView()
   }
@@ -61,56 +54,7 @@ export default class extends Controller {
     document.body.style.overflow = open ? "hidden" : ""
   }
 
-  hideDiscardPrompt() { this.discardPromptTarget.dataset.open = "false" }
-  confirmDiscard() {
-    findCartController(this.application)?.clearStagedItems()
-    this.discardPromptTarget.dataset.open = "false"
-    findCartController(this.application)?.setDrawerOpen(false)
-  }
-
-  // ─── PO dropdown ─────────────────────────────────────────────────────────
-  togglePOSelector() {
-    this.poDropdownOpen = !this.poDropdownOpen
-    this.poDropdownTarget.classList.toggle("hidden", !this.poDropdownOpen)
-    this.poCaretTarget.classList.toggle("rotate-180", this.poDropdownOpen)
-  }
-
-  showNewPOInput() {
-    this.newPOInputWrapperTarget.classList.remove("hidden")
-    setTimeout(() => this.newPOInputTarget.focus(), 50)
-  }
-  cancelNewPO() {
-    this.newPOInputWrapperTarget.classList.add("hidden")
-    this.newPOInputTarget.value = ""
-    this.newPOErrorTarget.classList.add("hidden")
-  }
-  newPOKeyDown(event) {
-    if (event.key === "Enter") this.saveNewPO()
-    if (event.key === "Escape") this.cancelNewPO()
-  }
-  saveNewPO() {
-    const cart = findCartController(this.application); if (!cart) return
-    const trimmed = (this.newPOInputTarget.value || "").trim().toUpperCase()
-    if (!trimmed) return this.#newPOError("Please enter a PO name")
-    if (trimmed.length > 30) return this.#newPOError("Maximum 30 characters")
-    if (cart.purchaseOrders.find(po => po.id === trimmed)) return this.#newPOError("This PO already exists")
-    cart.addPurchaseOrder(trimmed)
-    this.cancelNewPO()
-  }
-  #newPOError(msg) {
-    this.newPOErrorTarget.textContent = msg
-    this.newPOErrorTarget.classList.remove("hidden")
-  }
-
-  // ─── Staging mode actions ────────────────────────────────────────────────
-  createNewDraftPO() {
-    const cart = findCartController(this.application); if (!cart) return
-    const newId = cart.generateNewPOId()
-    cart.addNewDraftPO(newId, cart.selectedDeliveryWeek)
-    cart.mergeStagedItemsIntoPO(newId)
-  }
-
-  // ─── Delivery editor ─────────────────────────────────────────────────────
+  // ─── Delivery week (primary anchor) ──────────────────────────────────────────
   showDeliveryEditor() {
     this.deliveryBannerTarget.classList.add("hidden")
     this.deliveryEditorTarget.classList.remove("hidden")
@@ -127,7 +71,7 @@ export default class extends Controller {
     findCartController(this.application)?.setRepeatMode(event.target.value)
   }
 
-  // ─── Bottom CTAs ─────────────────────────────────────────────────────────
+  // ─── Bottom CTAs ─────────────────────────────────────────────────────────────
   saveDraft() {
     const cart = findCartController(this.application); if (!cart || cart.items.length === 0) return
     const btn = this.saveButtonTarget
@@ -165,30 +109,22 @@ export default class extends Controller {
     this.#startCountdown()
   }
 
-  // ─── Rendering ───────────────────────────────────────────────────────────
+  // ─── Rendering ───────────────────────────────────────────────────────────────
   #render() {
     const cart = findCartController(this.application); if (!cart) return
     const items = cart.items
 
-    // Staging vs normal panel
-    if (!cart.hasActivePO && items.length > 0) {
-      this.stagingPanelTarget.classList.remove("hidden")
-      this.poSelectorTarget.classList.add("hidden")
-      this.#renderDraftPOList()
+    // Lead: delivery week (primary) + auto-assigned PO# (secondary metadata).
+    this.weekLabelTarget.textContent = this.#formatWeekOf(cart.selectedDeliveryWeek)
+    const poId = cart.selectedPOId
+    if (poId) {
+      this.poMetaTarget.textContent = `Draft PO: ${poId}`
+      this.poMetaTarget.classList.remove("hidden")
     } else {
-      this.stagingPanelTarget.classList.add("hidden")
-      this.poSelectorTarget.classList.remove("hidden")
+      this.poMetaTarget.classList.add("hidden")
     }
-
-    // PO selector display
-    this.poIdTarget.textContent = cart.selectedPOId
-    this.poDeliveryTarget.textContent = this.#deliveryForPO(cart.selectedPOId)
-    this.#renderPOList(cart)
-
-    // Delivery banner
-    this.weekLabelTarget.textContent = "Week of " + this.#formatWeekOf(cart.selectedDeliveryWeek)
     if (cart.repeatMode !== "none") {
-      this.repeatLabelTarget.textContent = " · " + this.#labelForRepeat(cart.repeatMode)
+      this.repeatLabelTarget.textContent = "· " + this.#labelForRepeat(cart.repeatMode)
       this.repeatLabelTarget.classList.remove("hidden")
     } else {
       this.repeatLabelTarget.classList.add("hidden")
@@ -231,56 +167,13 @@ export default class extends Controller {
       : `<span class="text-[#1f1f1f] text-[14px]">Add more items to meet min order quantity</span>`
 
     // Saved indicator
-    if (cart.hasActivePO && items.length > 0) {
+    if (items.length > 0) {
       this.savedIndicatorTarget.dataset.visible = "true"
       if (this.savedTimer) clearTimeout(this.savedTimer)
       this.savedTimer = setTimeout(() => { this.savedIndicatorTarget.dataset.visible = "false" }, 2000)
     } else {
       this.savedIndicatorTarget.dataset.visible = "false"
     }
-  }
-
-  #renderDraftPOList() {
-    const html = this.draftPosValue.map(po => `
-      <button data-action="click->cart-drawer#mergeIntoDraft"
-              data-po-id="${po.id}"
-              class="w-full flex items-center justify-between px-3 py-2.5 mb-1.5 bg-white border border-[#e8e8e8] rounded-xl hover:border-[#28ba93] hover:bg-[#f0fdf8] transition-colors text-left no-min-h">
-        <div>
-          <p class="text-[13px] font-bold text-[#28ba93]">${po.id}</p>
-          <p class="text-[11px] text-[#777]">Delivery: ${po.delivery_date_short || "No date set"}</p>
-        </div>
-        <span class="text-[11px] font-bold text-[#28ba93]">Merge items →</span>
-      </button>`).join("")
-    this.draftPoListTarget.innerHTML = html
-  }
-
-  mergeIntoDraft(event) {
-    const id = event.currentTarget.dataset.poId
-    findCartController(this.application)?.mergeStagedItemsIntoPO(id)
-  }
-
-  #renderPOList(cart) {
-    const html = cart.purchaseOrders.map(po => {
-      const selected = po.id === cart.selectedPOId
-      const delivery = this.#deliveryForPO(po.id)
-      const isFromBaseSet = ["004-CHARLES-00017", "005-BRENDA-00098", "006-STEPH-00001"].includes(po.id)
-      return `<button data-action="click->cart-drawer#selectPO" data-po-id="${po.id}"
-                class="flex items-center gap-3 w-full text-left px-2 py-2 rounded-lg hover:bg-[#f7f5ef] transition-colors hover:translate-x-[2px] no-min-h">
-        <div class="w-4 h-4 rounded-[2px] flex items-center justify-center shrink-0 border transition-all ${selected ? "bg-[#28ba93] border-[#28ba93]" : "bg-white border-[#a1a4aa]"}">
-          ${selected ? '<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ""}
-        </div>
-        <span class="flex-1 text-[13px] font-bold transition-colors ${selected ? "text-[#28ba93]" : "text-[#377b82] opacity-60"}">${po.label}</span>
-        ${delivery ? `<span class="text-[12px] text-[#777] shrink-0">Delivery: ${delivery}</span>` : ""}
-        ${isFromBaseSet ? "" : '<span class="text-[10px] bg-[#beead8] text-[#035257] font-bold px-2 py-0.5 rounded-full shrink-0">New</span>'}
-      </button>`
-    }).join("")
-    this.poListTarget.innerHTML = html
-  }
-
-  selectPO(event) {
-    const id = event.currentTarget.dataset.poId
-    findCartController(this.application)?.setSelectedPOId(id)
-    this.togglePOSelector()
   }
 
   #renderWeekOptions() {
@@ -445,7 +338,7 @@ export default class extends Controller {
       if (n <= 0) {
         clearInterval(this.countdownTimer)
         const cart = findCartController(this.application)
-        cart?.clearItems()
+        cart?.clearActiveDraft()
         cart?.setDrawerOpen(false)
         this.view = "cart"
         this.#switchView()
@@ -472,9 +365,6 @@ export default class extends Controller {
     const mon = new Date(wed); mon.setDate(wed.getDate() - 2)
     return mon.toLocaleDateString("en-US", { month: "long", day: "numeric" })
   }
-  #formatDeliveryShort(iso) {
-    return this.#parseISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-  }
   #formatWeekOption(iso) {
     const wed = this.#parseISO(iso)
     const mon = new Date(wed); mon.setDate(wed.getDate() - 2)
@@ -494,12 +384,5 @@ export default class extends Controller {
   #labelForRepeat(mode) {
     const map = { weekly: "Weekly", biweekly: "Bi-weekly", monthly: "Monthly", custom: "Custom" }
     return map[mode] || ""
-  }
-  #deliveryForPO(poId) {
-    if (!poId) return ""
-    const staticPO = this.draftPosValue.find(p => p.id === poId)
-    if (staticPO?.delivery_date_short) return staticPO.delivery_date_short
-    const cart = findCartController(this.application)
-    return cart ? this.#formatDeliveryShort(cart.selectedDeliveryWeek) : ""
   }
 }

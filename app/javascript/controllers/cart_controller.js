@@ -2,17 +2,24 @@ import { Controller } from "@hotwired/stimulus"
 
 // cart_controller — Singleton attached to <body>.
 //
-// Owns: cart items, selected PO, draft POs, drawer open state, delivery week, repeat mode.
+// Mental model (T01): the buyer is "ordering for a delivery week." Each delivery
+// week owns exactly one draft Purchase Order, auto-created with a system-assigned
+// PO# the first time that week is selected or has an item added. The buyer never
+// creates or picks a PO number — it's internal metadata.
+//
+// State shape:
+//   draftsByWeek: { [weekISO]: { poId, items: [{ vendorId, productId, quantity, unit }] } }
+//   selectedDeliveryWeek: weekISO   ← the active draft is draftsByWeek[selectedDeliveryWeek]
+//   poSeq:                Int       ← next sequence number for generated PO#s
+//
 // Persists to localStorage (key from data-cart-storage-key-value).
 // Communicates via custom events on document:
 //   cart:changed        — items / counts updated
-//   cart:po-changed     — selected PO changed (selectedPOId)
-//   cart:drawer-toggle  — drawer open state changed ({open})
-//   cart:item-added     — a specific product was just added (for bump animations)
+//   cart:po-changed     — active draft / PO# / delivery week changed
+//   cart:drawer-toggle  — drawer open state changed ({ open })
+//   cart:item-added     — a product was just added (for bump animations)
 //
-// Cross-controller access: other controllers call
-//   this.application.getControllerForElementAndIdentifier(document.body, "cart")
-// (or use a `static targets = ["cart"]` if you nest under body).
+// Cross-controller access via the findCartController() helper exported below.
 export default class extends Controller {
   static values = {
     storageKey: { type: String, default: "cureate-cart-v1" },
@@ -21,118 +28,81 @@ export default class extends Controller {
   // ── Lifecycle ────────────────────────────────────────────────────────────
   connect() {
     this.state = this.#load() || this.#defaultState()
+    this.#migrateLegacyState()
+    // Selecting a delivery week auto-assigns its PO# (the buyer never creates one).
+    this.#ensureDraft(this.state.selectedDeliveryWeek)
+    this.#persist()
     this.#announce("cart:connected")
     this.#emit("cart:changed")
+    this.#emit("cart:po-changed")
   }
 
-  // ── Public API ───────────────────────────────────────────────────────────
+  // ── Active draft (keyed by delivery week) ─────────────────────────────────
+  #activeDraft() { return this.state.draftsByWeek[this.state.selectedDeliveryWeek] }
 
-  // items: Array<{ vendorId, productId, quantity, unit }>
-  get items() { return this.state.items }
+  #ensureDraft(week) {
+    if (!this.state.draftsByWeek[week]) {
+      this.state.draftsByWeek[week] = { poId: this.#generatePOId(), items: [] }
+    }
+    return this.state.draftsByWeek[week]
+  }
+
+  // System-generated, never buyer-chosen. Format: "007-MARKET-00001".
+  #generatePOId() {
+    const seq = this.state.poSeq || 1
+    this.state.poSeq = seq + 1
+    return `007-MARKET-${String(seq).padStart(5, "0")}`
+  }
+
+  // ── Items (always scoped to the active week's draft) ──────────────────────
+  get items() { return this.#activeDraft()?.items ?? [] }
 
   addItem(vendorId, productId, delta, unit = "units") {
-    const items = [...this.state.items]
+    // First item for a week implicitly creates that week's draft + PO#.
+    const draft = this.#ensureDraft(this.state.selectedDeliveryWeek)
+    const items = [...draft.items]
     const idx = items.findIndex(i => i.vendorId === vendorId && i.productId === productId)
     if (idx >= 0) {
       const newQty = items[idx].quantity + delta
-      if (newQty <= 0) {
-        items.splice(idx, 1)
-      } else {
-        items[idx] = { ...items[idx], quantity: newQty, unit }
-      }
+      if (newQty <= 0) items.splice(idx, 1)
+      else items[idx] = { ...items[idx], quantity: newQty, unit }
     } else if (delta > 0) {
       items.push({ vendorId, productId, quantity: delta, unit })
     }
-    this.state.items = items
+    draft.items = items
     this.#persist()
     this.#emit("cart:changed")
+    this.#emit("cart:po-changed")
     if (delta > 0) this.#emit("cart:item-added", { vendorId, productId })
   }
 
   removeItem(vendorId, productId) {
-    this.state.items = this.state.items.filter(i => !(i.vendorId === vendorId && i.productId === productId))
+    const draft = this.#activeDraft(); if (!draft) return
+    draft.items = draft.items.filter(i => !(i.vendorId === vendorId && i.productId === productId))
     this.#persist()
     this.#emit("cart:changed")
   }
 
   clearItems() {
-    this.state.items = []
+    const draft = this.#activeDraft(); if (!draft) return
+    draft.items = []
     this.#persist()
     this.#emit("cart:changed")
   }
 
-  clearStagedItems() {
-    this.state.items = []
-    this.state.selectedPOId = ""
+  // Used after a PO is submitted: retire the week's draft so the next order for
+  // that week is auto-assigned a fresh PO# (created on reconnect / next add).
+  clearActiveDraft() {
+    delete this.state.draftsByWeek[this.state.selectedDeliveryWeek]
     this.#persist()
     this.#emit("cart:changed")
     this.#emit("cart:po-changed")
   }
 
-  // ── PO selection / drafts ────────────────────────────────────────────────
-  get selectedPOId()  { return this.state.selectedPOId }
-  get hasActivePO()   { return this.state.selectedPOId !== "" }
-  get isActivePODraft() {
-    if (!this.hasActivePO) return true
-    const po = this.state.purchaseOrders.find(p => p.id === this.state.selectedPOId)
-    return !po || po.status === "Draft"
-  }
-
-  setSelectedPOId(id) {
-    this.state.selectedPOId = id || ""
-    this.#persist()
-    this.#emit("cart:po-changed")
-    this.#emit("cart:changed")
-  }
-
-  // Public, client-known PO list (Draft POs created via the drawer).
-  get purchaseOrders() { return this.state.purchaseOrders }
-
-  addPurchaseOrder(id) {
-    const trimmed = (id || "").trim()
-    if (!trimmed) return
-    this.state.purchaseOrders = [...this.state.purchaseOrders, { id: trimmed, label: trimmed }]
-    this.state.selectedPOId = trimmed
-    this.#persist()
-    this.#emit("cart:po-changed")
-    this.#emit("cart:changed")
-  }
-
-  addNewDraftPO(id, deliveryDate) {
-    if (!this.state.purchaseOrders.find(p => p.id === id)) {
-      this.state.purchaseOrders = [...this.state.purchaseOrders, { id, label: id }]
-    }
-    // Track this PO's delivery date in case the user opens it later.
-    this.state.deliveryByPO = { ...(this.state.deliveryByPO || {}), [id]: deliveryDate }
-    this.#persist()
-    this.#emit("cart:po-changed")
-  }
-
-  generateNewPOId() {
-    const existing = this.state.purchaseOrders.length
-    const num = String(existing + 1).padStart(3, "0")
-    return `${num}-MARKET-${String(Date.now()).slice(-5)}`
-  }
-
-  mergeStagedItemsIntoPO(poId) {
-    this.state.selectedPOId = poId
-    this.#persist()
-    this.#emit("cart:po-changed")
-    this.#emit("cart:changed")
-  }
-
-  syncItemsFromPO(poId, lineItems = []) {
-    this.state.selectedPOId = poId
-    this.state.items = lineItems.map(li => ({
-      vendorId:  li.vendorId,
-      productId: li.productId,
-      quantity:  li.quantity,
-      unit:      li.unit,
-    }))
-    this.#persist()
-    this.#emit("cart:changed")
-    this.#emit("cart:po-changed")
-  }
+  // ── Active draft / PO# (read-only — auto-assigned, not buyer-chosen) ───────
+  get selectedPOId()    { return this.#activeDraft()?.poId ?? "" }
+  get hasActivePO()     { return this.items.length > 0 }
+  get isActivePODraft() { return true }
 
   // ── Drawer ───────────────────────────────────────────────────────────────
   get isDrawerOpen() { return this.state.drawerOpen }
@@ -143,17 +113,21 @@ export default class extends Controller {
     this.#emit("cart:drawer-toggle", { open: this.state.drawerOpen })
   }
 
-  toggleDrawer() {
-    this.setDrawerOpen(!this.state.drawerOpen)
-  }
+  toggleDrawer() { this.setDrawerOpen(!this.state.drawerOpen) }
 
-  // ── Delivery / repeat ────────────────────────────────────────────────────
+  // ── Delivery week (the primary anchor) ────────────────────────────────────
   get selectedDeliveryWeek() { return this.state.selectedDeliveryWeek }
+
+  // Switching weeks surfaces that week's existing draft, or auto-creates one.
   setSelectedDeliveryWeek(iso) {
+    if (!iso) return
     this.state.selectedDeliveryWeek = iso
+    this.#ensureDraft(iso)
     this.#persist()
+    this.#emit("cart:po-changed")
     this.#emit("cart:changed")
   }
+
   get repeatMode() { return this.state.repeatMode }
   setRepeatMode(mode) {
     this.state.repeatMode = mode
@@ -169,11 +143,11 @@ export default class extends Controller {
 
   // ── Aggregations ─────────────────────────────────────────────────────────
   getTotalItems() {
-    return this.state.items.reduce((s, i) => s + i.quantity, 0)
+    return this.items.reduce((s, i) => s + i.quantity, 0)
   }
 
   getTotalUnits(vendorId, unitsPerCaseByVendor = {}) {
-    return this.state.items
+    return this.items
       .filter(i => i.vendorId === vendorId)
       .reduce((sum, i) => {
         const perCase = unitsPerCaseByVendor[vendorId] || 1
@@ -182,27 +156,41 @@ export default class extends Controller {
   }
 
   quantityFor(vendorId, productId) {
-    const item = this.state.items.find(i => i.vendorId === vendorId && i.productId === productId)
+    const item = this.items.find(i => i.vendorId === vendorId && i.productId === productId)
     return item ? item.quantity : 0
   }
 
   // ── Internals ────────────────────────────────────────────────────────────
-
   #defaultState() {
     return {
-      items: [],
-      selectedPOId: "",
-      drawerOpen: false,
       selectedDeliveryWeek: this.#nextWednesday(),
       repeatMode: "none",
       customEndType: "never",
-      purchaseOrders: [
-        { id: "004-CHARLES-00017", label: "004-CHARLES-00017" },
-        { id: "005-BRENDA-00098",  label: "005-BRENDA-00098"  },
-        { id: "006-STEPH-00001",   label: "006-STEPH-00001"   },
-        { id: "007-MARKET-00001",  label: "007-MARKET-00001"  },
-      ],
-      deliveryByPO: {},
+      drawerOpen: false,
+      poSeq: 1,
+      draftsByWeek: {},
+    }
+  }
+
+  // Upgrade a pre-T01 persisted cart (flat `items` + `selectedPOId`) into the
+  // delivery-week-keyed shape, so returning buyers don't lose their draft.
+  #migrateLegacyState() {
+    if (this.state.draftsByWeek) return
+    const week  = this.state.selectedDeliveryWeek || this.#nextWednesday()
+    const items = Array.isArray(this.state.items) ? this.state.items : []
+    const draftsByWeek = {}
+    let poSeq = 1
+    if (items.length) {
+      draftsByWeek[week] = { poId: `007-MARKET-${String(poSeq).padStart(5, "0")}`, items }
+      poSeq += 1
+    }
+    this.state = {
+      selectedDeliveryWeek: week,
+      repeatMode:    this.state.repeatMode || "none",
+      customEndType: this.state.customEndType || "never",
+      drawerOpen:    !!this.state.drawerOpen,
+      poSeq,
+      draftsByWeek,
     }
   }
 
