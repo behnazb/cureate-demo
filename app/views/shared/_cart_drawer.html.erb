@@ -238,8 +238,10 @@
     </div>
 
     <%# ───── SUCCESS VIEW ───── %>
-    <div data-cart-drawer-target="successView" class="hidden flex-col h-full items-center justify-center px-8 text-center relative bg-[#f7f5ef]">
-      <button data-action="click->cart-drawer#close"
+    <div data-cart-drawer-target="successView"
+         data-action="mouseenter->cart-drawer#cancelAutoClose touchstart->cart-drawer#cancelAutoClose"
+         class="hidden flex-col h-full items-center justify-center px-8 text-center relative bg-[#f7f5ef]">
+      <button data-action="click->cart-drawer#finishToProducts" aria-label="Close"
               class="absolute top-4 right-4 w-6 h-6 flex items-center justify-center text-[#777] hover:text-[#1f1f1f] transition-colors no-min-h">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -254,17 +256,22 @@
       </div>
       <div class="flex flex-col items-center gap-3 mb-8">
         <h2 class="text-[24px] font-black text-[#1f1f1f]">PO Submitted!</h2>
-        <p class="text-[14px] text-[#777] leading-relaxed max-w-[280px]">
-          Your purchase order <span data-cart-drawer-target="successPOId" class="font-bold text-[#035257]"></span> has been submitted for review. Vendors will be notified shortly.
+        <p class="text-[14px] text-[#777] leading-relaxed max-w-[300px]">
+          Your purchase order <span data-cart-drawer-target="successPOId" class="font-bold text-[#035257]"></span> has been submitted to Cureate for review. We'll confirm with vendors and notify you when it's processed.
         </p>
-        <div data-cart-drawer-target="successVendors" class="flex flex-col gap-2 w-full mt-2"></div>
       </div>
-      <div class="flex flex-col items-center gap-3 w-full">
-        <div class="w-full h-1 bg-[#e6e6e6] rounded-full overflow-hidden">
-          <div data-cart-drawer-target="successProgress" class="h-full bg-[#28ba93] rounded-full" style="width: 100%; transition: width 8000ms linear;"></div>
+      <div class="flex flex-col items-center gap-3 w-full max-w-[320px]">
+        <button data-action="click->cart-drawer#viewPurchaseOrder"
+                class="w-full h-[49px] rounded-full bg-[#28ba93] text-white text-[16px] font-bold flex items-center justify-center gap-2 hover:bg-[#22a882] transition-colors no-min-h hover:scale-[1.01] active:scale-[0.98]">
+          View Purchase Order
+        </button>
+        <div data-cart-drawer-target="autoCloseUi" class="flex flex-col items-center gap-3 w-full">
+          <div class="w-full h-1 bg-[#e6e6e6] rounded-full overflow-hidden">
+            <div data-cart-drawer-target="successProgress" class="h-full bg-[#28ba93] rounded-full" style="width: 100%; transition: width 8000ms linear;"></div>
+          </div>
+          <p class="text-[11px] text-[#a1a4aa]">Closing in <span data-cart-drawer-target="countdown">8</span>s</p>
         </div>
-        <p class="text-[11px] text-[#a1a4aa]">Closing in <span data-cart-drawer-target="countdown">8</span>s</p>
-        <button data-action="click->cart-drawer#close"
+        <button data-action="click->cart-drawer#finishToProducts"
                 class="text-[13px] font-bold text-[#035257] hover:underline transition-colors no-min-h">
           Close and continue shopping
         </button>

@@ -16,7 +16,7 @@ export default class extends Controller {
     "emptyState", "vendorGroups", "subtotalBlock", "subtotal", "progressBar", "minStatus",
     "savedIndicator", "saveButton", "continueButton",
     "confirmationPOId", "confirmationBody",
-    "successPOId", "successVendors", "successProgress", "countdown",
+    "successPOId", "successProgress", "countdown", "autoCloseUi",
   ]
   static values = { vendors: Array }
 
@@ -103,10 +103,37 @@ export default class extends Controller {
   }
 
   submitPO() {
+    // Capture the PO# now — the active draft is retired when the modal is dismissed.
+    this.submittedPOId = findCartController(this.application)?.selectedPOId || ""
     this.view = "success"
     this.#renderSuccess()
     this.#switchView()
     this.#startCountdown()
+  }
+
+  // ─── Post-submit success actions ─────────────────────────────────────────────
+  // Cancel the auto-close countdown when the buyer hovers / touches the modal.
+  cancelAutoClose() {
+    clearInterval(this.countdownTimer)
+    this.autoCloseUiTarget.classList.add("hidden")
+  }
+
+  // Primary CTA — open the just-submitted PO's detail page.
+  viewPurchaseOrder() {
+    clearInterval(this.countdownTimer)
+    const cart = findCartController(this.application)
+    cart?.clearActiveDraft()
+    cart?.setDrawerOpen(false)
+    window.location.href = `/purchase_orders/${encodeURIComponent(this.submittedPOId)}`
+  }
+
+  // X button / "Close and continue shopping" / auto-close timeout — back to the gallery.
+  finishToProducts() {
+    clearInterval(this.countdownTimer)
+    const cart = findCartController(this.application)
+    cart?.clearActiveDraft()
+    cart?.setDrawerOpen(false)
+    window.location.href = "/products"
   }
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -312,19 +339,15 @@ export default class extends Controller {
   }
 
   #renderSuccess() {
-    const cart = findCartController(this.application); if (!cart) return
-    this.successPOIdTarget.textContent = cart.selectedPOId
-    const grouped = this.#groupItemsByVendor(cart.items)
-    this.successVendorsTarget.innerHTML = grouped.map(g => `
-      <div class="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-[#e6e6e6]">
-        <div class="w-5 h-5 rounded-full bg-[#28ba93] flex items-center justify-center shrink-0">
-          <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <span class="text-[13px] font-bold text-[#444955] flex-1 text-left">${g.vendor.name}</span>
-        <span class="text-[11px] text-[#28ba93] font-bold">Notified</span>
-      </div>`).join("")
-    // Start progress bar animation
-    requestAnimationFrame(() => { this.successProgressTarget.style.width = "0%" })
+    this.successPOIdTarget.textContent = this.submittedPOId
+    // Reset + restart the auto-close progress bar (handles re-submits in one session).
+    this.autoCloseUiTarget.classList.remove("hidden")
+    this.successProgressTarget.style.transition = "none"
+    this.successProgressTarget.style.width = "100%"
+    requestAnimationFrame(() => {
+      this.successProgressTarget.style.transition = "width 8000ms linear"
+      this.successProgressTarget.style.width = "0%"
+    })
   }
 
   #startCountdown() {
@@ -336,12 +359,7 @@ export default class extends Controller {
       this.countdownTarget.textContent = n
       if (n <= 0) {
         clearInterval(this.countdownTimer)
-        const cart = findCartController(this.application)
-        cart?.clearActiveDraft()
-        cart?.setDrawerOpen(false)
-        this.view = "cart"
-        this.#switchView()
-        window.location.href = "/purchase-orders?tab=draft"
+        this.finishToProducts()
       }
     }, 1000)
   }
