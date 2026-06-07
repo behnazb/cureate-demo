@@ -45,6 +45,11 @@ module ApplicationHelper
     PO_STATUS_CLASSES[status] || "bg-[#e8e8e8] text-[#555]"
   end
 
+  # Buyer-facing label for a PO status (T05) — e.g. "Processing" → "Sent to Vendors".
+  def po_status_label(status)
+    PurchaseOrder.label_for(status)
+  end
+
   # Returns the certifications minus the trailing " Business" suffix.
   def short_cert(cert)
     cert.to_s.sub(/\s*Business\s*$/i, "")

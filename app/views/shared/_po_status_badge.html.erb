@@ -1,4 +1,4 @@
-<%# Locals: status %>
-<span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold <%= po_status_classes(status) %>">
-  <%= status %>
+<%# Locals: status (underlying enum). Displays the buyer-facing label (T05). %>
+<span class="inline-flex items-center whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-bold <%= po_status_classes(status) %>">
+  <%= po_status_label(status) %>
 </span>

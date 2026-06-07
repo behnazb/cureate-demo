@@ -9,6 +9,18 @@
 class PurchaseOrder
   STATUSES = %w[Draft In\ Review Processing Confirmed Delivered Invoiced Paid Cancelled].freeze
 
+  # Display labels (T05). The underlying status enum above is unchanged — only the
+  # text shown to buyers differs: "Processing" reads as "Sent to Vendors", and
+  # "In Review" is clarified to "In Review by Cureate".
+  STATUS_LABELS = {
+    "In Review"  => "In Review by Cureate",
+    "Processing" => "Sent to Vendors",
+  }.freeze
+
+  def self.label_for(status)
+    STATUS_LABELS[status] || status
+  end
+
   ATTRS = %i[
     id status total cureator_name created_at delivery_date delivery_date_short
     date_range line_items
@@ -28,17 +40,27 @@ class PurchaseOrder
     %w[Delivered Cancelled].include?(status)
   end
 
-  # Tab grouping used by the index page
+  # Tab grouping used by the index page. Visible-by-default tabs come first;
+  # rarely-clicked statuses are flagged `overflow:` and demoted in the UI (T05).
+  # `value` (URL param) and `statuses` (underlying enum) are unchanged.
   TAB_DEFINITIONS = [
-    { label: "Draft",      value: "draft",      statuses: ["Draft"] },
-    { label: "In Review",  value: "in-review",  statuses: ["In Review"] },
-    { label: "Processing", value: "processing", statuses: ["Processing"] },
-    { label: "Confirmed",  value: "confirmed",  statuses: ["Confirmed"] },
-    { label: "Delivered",  value: "delivered",  statuses: ["Delivered"] },
-    { label: "Invoiced",   value: "invoiced",   statuses: ["Invoiced"] },
-    { label: "Paid",       value: "paid",       statuses: ["Paid"] },
-    { label: "Cancelled",  value: "cancelled",  statuses: ["Cancelled"] },
+    { label: "Draft",                value: "draft",      statuses: ["Draft"] },
+    { label: "In Review by Cureate", value: "in-review",  statuses: ["In Review"] },
+    { label: "Sent to Vendors",      value: "processing", statuses: ["Processing"] },
+    { label: "Confirmed",            value: "confirmed",  statuses: ["Confirmed"] },
+    { label: "Delivered",            value: "delivered",  statuses: ["Delivered"] },
+    { label: "Paid",                 value: "paid",       statuses: ["Paid"] },
+    { label: "Invoiced",             value: "invoiced",   statuses: ["Invoiced"],  overflow: true },
+    { label: "Cancelled",            value: "cancelled",  statuses: ["Cancelled"], overflow: true },
   ].freeze
+
+  def self.primary_tabs
+    TAB_DEFINITIONS.reject { |t| t[:overflow] }
+  end
+
+  def self.overflow_tabs
+    TAB_DEFINITIONS.select { |t| t[:overflow] }
+  end
 
   def self.tab_for(value)
     TAB_DEFINITIONS.find { |t| t[:value] == value } || TAB_DEFINITIONS.first
