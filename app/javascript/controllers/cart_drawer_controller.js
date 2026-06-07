@@ -279,7 +279,6 @@ export default class extends Controller {
             </div>
             <span class="text-[14px] font-bold text-[#777]">${g.vendor.name}</span>
           </div>
-          <span class="text-[10px] font-bold text-[#28ba93] uppercase tracking-wide">Order sent</span>
         </div>
         ${g.products.map(i => `
           <div class="flex items-center justify-between p-4 bg-[#fbf9f6]" style="margin-bottom: 1px">
