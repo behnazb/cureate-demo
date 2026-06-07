@@ -1,4 +1,7 @@
 class PurchaseOrdersController < ApplicationController
+  # The submit endpoint is a demo convenience (no auth/session) — skip CSRF for it.
+  skip_before_action :verify_authenticity_token, only: :create, raise: false
+
   def index
     @search = params[:q].to_s
     raw_tab = params[:tab]
@@ -32,7 +35,58 @@ class PurchaseOrdersController < ApplicationController
     @total          = @subtotal + @processing_fee
   end
 
+  # POST /purchase_orders
+  # Registers a just-submitted cart as an in-memory PO so it's viewable ("View
+  # Purchase Order") and appears in the list under "In Review". No database — the
+  # record lives in the process and resets on restart. Mirrors what the production
+  # app would persist server-side on submit.
+  def create
+    id = params[:id].to_s.strip
+    return head(:unprocessable_entity) if id.blank?
+
+    week = params[:delivery_week].to_s
+    line_items = Array(params[:items]).filter_map do |it|
+      vendor  = Vendor.find(it[:vendor_id])
+      product = vendor&.products&.find { |p| p.id == it[:product_id] }
+      next unless product
+      POLineItem.new(
+        vendor_id:    it[:vendor_id],
+        product_id:   it[:product_id],
+        quantity:     it[:quantity].to_i,
+        unit:         it[:unit].presence || "units",
+        unit_price:   product.wholesale_unit_price,
+        delivery_fee: 0,
+      )
+    end
+
+    subtotal = line_items.sum(&:extended_cost)
+    po = PurchaseOrder.new(
+      id: id,
+      status: "In Review",
+      total: (subtotal * 1.10).round(2),
+      cureator_name: "Cureate DMV",
+      created_at: Date.today.iso8601,
+      delivery_date: week.presence,
+      delivery_date_short: short_delivery(week),
+      date_range: nil,
+      line_items: line_items,
+    )
+
+    # Idempotent — replace any existing record with this id (e.g. a re-submit).
+    PurchaseOrder.all.reject! { |p| p.id == id }
+    PurchaseOrder.all << po
+
+    render json: { id: po.id }, status: :created
+  end
+
   private
+
+  def short_delivery(iso)
+    return nil if iso.blank?
+    Date.iso8601(iso).strftime("%b %-d")
+  rescue ArgumentError
+    nil
+  end
 
   def render_not_found
     render file: Rails.root.join("public/404.html"), status: :not_found, layout: false

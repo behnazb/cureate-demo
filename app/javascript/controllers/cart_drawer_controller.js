@@ -102,13 +102,41 @@ export default class extends Controller {
     this.#switchView()
   }
 
-  submitPO() {
+  async submitPO() {
     // Capture the PO# now — the active draft is retired when the modal is dismissed.
-    this.submittedPOId = findCartController(this.application)?.selectedPOId || ""
+    const cart = findCartController(this.application)
+    this.submittedPOId = cart?.selectedPOId || ""
+    // Register the order so "View Purchase Order" + the PO list can show it.
+    await this.#persistSubmission(cart)
     this.view = "success"
     this.#renderSuccess()
     this.#switchView()
     this.#startCountdown()
+  }
+
+  // POST the submitted cart to the server, which creates an in-memory PO record
+  // (status "In Review"). Best-effort — the success screen shows regardless.
+  async #persistSubmission(cart) {
+    if (!cart || !this.submittedPOId) return
+    try {
+      const token = document.querySelector('meta[name="csrf-token"]')?.content
+      await fetch("/purchase_orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "X-CSRF-Token": token } : {}),
+        },
+        body: JSON.stringify({
+          id: this.submittedPOId,
+          delivery_week: cart.selectedDeliveryWeek,
+          items: cart.items.map(i => ({
+            vendor_id: i.vendorId, product_id: i.productId, quantity: i.quantity, unit: i.unit,
+          })),
+        }),
+      })
+    } catch (e) {
+      /* demo: ignore network errors — still show the confirmation */
+    }
   }
 
   // ─── Post-submit success actions ─────────────────────────────────────────────
