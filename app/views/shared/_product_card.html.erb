@@ -3,18 +3,22 @@
   Quantity badge / stepper handled inline (mirrors ProductCard.tsx layout).
 %>
 <% return if product.shipping_fee? || product.image.blank? %>
-<% qty_class_id = "product-card-#{vendor.id}-#{product.id}" %>
+<% qty_class_id     = "product-card-#{vendor.id}-#{product.id}" %>
+<%# Width + add-button placement are overridable so the same card works in the full
+    gallery (200px) and the compact cart "Recently Purchased" strip. %>
+<% frame_class      = local_assigns.fetch(:frame_class, "w-full md:w-[200px] md:shrink-0") %>
+<% add_button_class = local_assigns.fetch(:add_button_class, "absolute bottom-2 right-2") %>
 
 <%= link_to vendor_product_path(vendor.id, product.id),
-    class: "product-card no-min-h block #{qty_class_id}",
+    class: "group product-card no-min-h block #{qty_class_id}",
     data: { vendor_id: vendor.id, product_id: product.id, controller: "product-card" } do %>
-  <div class="flex flex-col rounded-lg bg-white shadow-sm cursor-pointer w-full md:w-[200px] md:shrink-0 border border-[#e8e8e8] hover:scale-[1.03] transition-transform"
+  <div class="flex flex-col rounded-lg bg-white shadow-sm cursor-pointer <%= frame_class %> border border-[#e8e8e8] hover:scale-[1.03] transition-transform"
        data-product-card-target="frame">
     <div class="relative shrink-0 bg-[#f7f5ef] flex items-center justify-center p-2 overflow-hidden rounded-t-lg aspect-square md:aspect-auto md:h-[135px]">
       <img src="<%= product.image %>" alt="<%= product.name %>" class="h-full w-full object-contain mix-blend-multiply">
 
       <%# Add button — replaced by stepper when qty > 0 (driven by add_to_cart controller) %>
-      <div class="absolute bottom-2 right-2">
+      <div class="<%= add_button_class %>">
         <%= render "shared/add_to_cart_button", vendor_id: vendor.id, product_id: product.id %>
       </div>
     </div>

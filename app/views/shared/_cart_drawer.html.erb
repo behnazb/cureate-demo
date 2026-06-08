@@ -163,8 +163,10 @@
             </div>
             <div class="flex items-stretch gap-2 overflow-x-auto pb-4 scrollbar-hide">
               <% recently_purchased.each do |rp| %>
-                <div class="shrink-0 w-[150px] flex flex-col">
-                  <%= render "shared/product_card", product: rp[:product], vendor: rp[:vendor] %>
+                <div class="shrink-0 w-[140px] flex flex-col">
+                  <%= render "shared/product_card", product: rp[:product], vendor: rp[:vendor],
+                        frame_class: "w-full",
+                        add_button_class: "absolute bottom-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity" %>
                 </div>
               <% end %>
             </div>
