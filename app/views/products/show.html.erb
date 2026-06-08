@@ -100,13 +100,13 @@
 
         <div class="border-t border-dashed border-[#e8e8e8] my-4"></div>
         <p class="font-bold uppercase tracking-widest mb-2 text-[#777] text-[13px]">Dietary Preferences</p>
-        <div class="flex gap-4 mt-2 flex-wrap">
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-x-2 gap-y-4 mt-2">
           <% @product.dietary.each do |pref| %>
-            <div class="flex flex-col items-center">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold bg-[#035257]">
+            <div class="flex flex-col items-center text-center">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold bg-[#035257] shrink-0">
                 <%= @product.dietary_abbr(pref) %>
               </div>
-              <span class="text-center mt-1 text-[#444955] text-[14px]"><%= pref %></span>
+              <span class="mt-1.5 text-[#444955] text-[13px] leading-tight"><%= pref %></span>
             </div>
           <% end %>
         </div>
