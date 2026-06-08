@@ -165,7 +165,7 @@
               <% recently_purchased.each do |rp| %>
                 <div class="shrink-0 w-[140px] flex flex-col">
                   <%= render "shared/product_card", product: rp[:product], vendor: rp[:vendor],
-                        frame_class: "w-full",
+                        frame_class: "w-full h-full",
                         add_button_class: "absolute bottom-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity" %>
                 </div>
               <% end %>

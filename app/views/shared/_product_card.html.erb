@@ -10,7 +10,7 @@
 <% add_button_class = local_assigns.fetch(:add_button_class, "absolute bottom-2 right-2") %>
 
 <%= link_to vendor_product_path(vendor.id, product.id),
-    class: "group product-card no-min-h block #{qty_class_id}",
+    class: "group product-card no-min-h block h-full #{qty_class_id}",
     data: { vendor_id: vendor.id, product_id: product.id, controller: "product-card" } do %>
   <div class="flex flex-col rounded-lg bg-white shadow-sm cursor-pointer <%= frame_class %> border border-[#e8e8e8] hover:scale-[1.03] transition-transform"
        data-product-card-target="frame">
@@ -26,7 +26,7 @@
     <div class="flex-1 flex flex-col overflow-hidden p-[10px] gap-[8px]">
       <p class="font-bold text-[#377b82] text-[14px]"><%= vendor.name %></p>
       <p class="font-bold leading-tight text-[#444955] text-[12px] line-clamp-2 min-h-[1.5rem]"><%= product.name %></p>
-      <p class="text-[#777] text-[13px]">$<%= sprintf("%.2f", product.wholesale_unit_price) %> / unit</p>
+      <p class="text-[#777] text-[13px] mt-auto">$<%= sprintf("%.2f", product.wholesale_unit_price) %> / unit</p>
     </div>
   </div>
 <% end %>
