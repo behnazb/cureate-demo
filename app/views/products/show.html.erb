@@ -113,8 +113,12 @@
 
         <%# Order section %>
         <div class="mt-8">
-          <div class="flex gap-3 rounded-xl p-4 mb-6 border bg-[#f7f5ef] border-[#e8e8e8]">
-            <span class="text-lg leading-none shrink-0 text-[#28ba93]">ⓘ</span>
+          <div class="flex items-start gap-3 rounded-xl p-4 mb-6 border bg-[#f7f5ef] border-[#e8e8e8]">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" class="shrink-0 text-[#28ba93] mt-[3px]" aria-hidden="true">
+              <circle cx="10" cy="10" r="8.5" stroke="currentColor" stroke-width="1.4"/>
+              <line x1="10" y1="9" x2="10" y2="14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="10" cy="6.3" r="0.65" fill="currentColor"/>
+            </svg>
             <div>
               <p class="font-bold mb-0.5 text-[#444955] text-[16px]">
                 Minimum order: <%= rules[:min_cases] %> cases (<%= rules[:min_units] %> units) across any <%= @vendor.name %> flavors
