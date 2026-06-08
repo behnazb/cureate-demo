@@ -1,7 +1,15 @@
 <% content_for :title, "#{@po.id} — Cureate Connect" %>
 <% card_class = "bg-white border border-[#e8e8e8] rounded-xl shadow-[2px_2px_10px_0px_rgba(156,153,153,0.25)]" %>
+<%
+  # Line items for the header "Add to Order" / "Duplicate PO" CTA (T11).
+  po_line_items = @po.line_items.map { |li|
+    { vendorId: li.vendor_id, productId: li.product_id, quantity: li.quantity, unit: li.unit }
+  }
+%>
 
-<div class="flex flex-1 min-h-0 bg-white font-['Lato']">
+<div data-controller="po-detail"
+     data-po-detail-line-items-value="<%= po_line_items.to_json %>"
+     class="flex flex-1 min-h-0 bg-white font-['Lato']">
   <%= render "shared/sidebar" %>
 
   <div class="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -18,13 +26,23 @@
       </div>
       <div class="flex items-center gap-2 shrink-0">
         <% if @po.draft? %>
-          <button class="no-min-h flex bg-[#28ba93] hover:bg-[#22a882] transition-colors items-center gap-2 rounded-full px-4 h-[38px] text-white font-bold text-[13px] whitespace-nowrap">
+          <button data-action="click->po-detail#loadToCart"
+                  class="no-min-h flex bg-[#28ba93] hover:bg-[#22a882] transition-colors items-center gap-2 rounded-full px-4 h-[38px] text-white font-bold text-[13px] whitespace-nowrap">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" class="shrink-0">
               <path d="M2 3h2l2.4 9.6A1 1 0 007.36 14h7.28a1 1 0 00.96-.72L17 7H5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               <circle cx="8" cy="17" r="1" fill="white"/>
               <circle cx="14" cy="17" r="1" fill="white"/>
             </svg>
-            View Draft PO
+            Add to Order
+          </button>
+        <% else %>
+          <button data-action="click->po-detail#loadToCart"
+                  class="no-min-h flex bg-[#28ba93] hover:bg-[#22a882] transition-colors items-center gap-2 rounded-full px-4 h-[38px] text-white font-bold text-[13px] whitespace-nowrap">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" class="shrink-0">
+              <rect x="7" y="7" width="11" height="11" rx="2.5" stroke="white" stroke-width="1.6"/>
+              <path d="M13 4H5a2 2 0 00-2 2v8" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            Duplicate PO
           </button>
         <% end %>
       </div>
@@ -54,14 +72,10 @@
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <button class="no-min-h border border-[#035257] text-[#035257] text-[11px] font-bold rounded-full px-3 h-[30px] hover:bg-[#f0fafa] transition-colors whitespace-nowrap">Download CSV</button>
-            <% if @po.draft? %>
-              <%= link_to "+ Add to Order", products_path,
-                  class: "no-min-h bg-[#28ba93] text-white text-[11px] font-bold rounded-full px-3 h-[30px] flex items-center hover:bg-[#22a882] transition-colors whitespace-nowrap" %>
-            <% end %>
+            <%# "Add to Order" / "Duplicate PO" now live in the page-header CTA (T11) %>
             <%= render "shared/po_dropdown_menu", items: [
               *( @po.draft? ? [{ label: "Add more to PO", icon: "add", action: "po:add-more", detail: { id: @po.id } }] : [] ),
-              { label: "Duplicate PO",    icon: "duplicate", action: "po:duplicate", detail: { id: @po.id } },
-              { label: "Request support", icon: "support",   action: "po:support",   detail: { id: @po.id } },
+              { label: "Request support", icon: "support", action: "po:support", detail: { id: @po.id } },
               *( @po.locked? ? [] : [{ label: "Cancel PO", icon: "cancel", action: "po:cancel", danger: true, detail: { id: @po.id } }] ),
             ] %>
           </div>

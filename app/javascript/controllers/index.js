@@ -21,6 +21,7 @@ import ProductsPageController     from "./products_page_controller"
 import PurchaseOrdersPageController from "./purchase_orders_page_controller"
 import VendorDetailController     from "./vendor_detail_controller"
 import ProductDetailController    from "./product_detail_controller"
+import PoDetailController         from "./po_detail_controller"
 import DiscloseController         from "./disclose_controller"
 import ProductCardController      from "./product_card_controller"
 import RowLinkController          from "./row_link_controller"
@@ -40,6 +41,7 @@ application.register("products-page",         ProductsPageController)
 application.register("purchase-orders-page",  PurchaseOrdersPageController)
 application.register("vendor-detail",         VendorDetailController)
 application.register("product-detail",        ProductDetailController)
+application.register("po-detail",              PoDetailController)
 application.register("disclose",              DiscloseController)
 application.register("product-card",          ProductCardController)
 application.register("row-link",              RowLinkController)

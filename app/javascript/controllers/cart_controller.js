@@ -112,6 +112,44 @@ export default class extends Controller {
     this.#emit("cart:changed")
   }
 
+  // Load a set of line items into a draft and make it the active one — used by the
+  // PO detail page's "Add to Order" / "Duplicate PO" CTA (T11). Lands them in the
+  // next delivery week that has no in-progress draft, so an existing cart is kept.
+  loadDraftItems(lineItems) {
+    const week = this.#nextOpenDeliveryWeek()
+    this.state.selectedDeliveryWeek = week
+    const draft = this.#ensureDraft(week)
+    draft.items = (lineItems || []).map(li => ({
+      vendorId:  li.vendorId,
+      productId: li.productId,
+      quantity:  Math.max(1, parseInt(li.quantity, 10) || 1),
+      unit:      li.unit === "cases" ? "cases" : "units",
+    }))
+    this.#persist()
+    this.#emit("cart:changed")
+    this.#emit("cart:po-changed")
+  }
+
+  #nextOpenDeliveryWeek() {
+    let week = this.state.selectedDeliveryWeek
+    for (let i = 0; i < 52; i++) {
+      const draft = this.state.draftsByWeek[week]
+      if (!draft || draft.items.length === 0) return week
+      week = this.#addDays(week, 7)
+    }
+    return week
+  }
+
+  #addDays(iso, n) {
+    const [y, m, d] = iso.split("-").map(Number)
+    const date = new Date(y, m - 1, d)
+    date.setDate(date.getDate() + n)
+    const yy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, "0")
+    const dd = String(date.getDate()).padStart(2, "0")
+    return `${yy}-${mm}-${dd}`
+  }
+
   // Used after a PO is submitted: retire the week's draft so the next order for
   // that week is auto-assigned a fresh PO# (created on reconnect / next add).
   clearActiveDraft() {
