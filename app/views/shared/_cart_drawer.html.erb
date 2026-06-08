@@ -154,12 +154,13 @@
           <div class="px-4 pt-4 pb-4">
             <div class="flex items-center justify-between py-3">
               <span class="font-bold text-[#1f1f1f] text-[11px]">Recently Purchased</span>
-              <button class="flex items-center gap-1 font-bold text-[#035257] text-[11px] no-min-h">
+              <%= link_to products_path, data: { action: "click->cart-drawer#close" },
+                  class: "flex items-center gap-1 font-bold text-[#035257] text-[11px] no-min-h" do %>
                 View all
                 <svg viewBox="0 0 7 11" fill="none" class="w-[7px] h-[11px]">
                   <path d="M1 1l4.5 4.5L1 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                 </svg>
-              </button>
+              <% end %>
             </div>
             <div class="flex items-stretch gap-2 overflow-x-auto pb-4 scrollbar-hide">
               <% recently_purchased.each do |rp| %>
@@ -176,16 +177,10 @@
 
       <%# Sticky bottom CTA — delineated from the scrolling content by a soft shadow %>
       <div class="shrink-0 relative z-10 shadow-[0_-6px_16px_rgba(0,0,0,0.05)]">
-        <div class="flex items-center justify-between px-4 bg-[#beead8] h-[50px]">
+        <div class="flex items-center px-4 bg-[#beead8] h-[50px]">
           <div class="flex items-center gap-3" data-cart-drawer-target="minStatus">
             <span class="text-[#1f1f1f] text-[14px]">Add more items to meet min order quantity</span>
           </div>
-          <button data-action="click->cart-drawer#close" aria-label="Close cart"
-                  class="flex items-center justify-center w-6 h-6 hover:opacity-70 transition-opacity text-[#1f1f1f] no-min-h">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
         </div>
         <div class="h-[4px] w-full bg-[#e6e6e6]">
           <div data-cart-drawer-target="progressBar" class="h-full bg-[#035257] transition-all duration-400 ease-out" style="width: 0%"></div>
