@@ -50,8 +50,28 @@ export default class extends Controller {
     this.#render()
   }
 
-  #open()  { this.menuTarget.dataset.open = "true";  this.caretTarget.classList.add("rotate-180") }
-  #close() { this.menuTarget.dataset.open = "false"; this.caretTarget.classList.remove("rotate-180") }
+  #open()  {
+    this.#position()
+    this.menuTarget.style.pointerEvents = "auto"
+    this.menuTarget.dataset.open = "true"
+    this.caretTarget.classList.add("rotate-180")
+  }
+  #close() {
+    this.menuTarget.dataset.open = "false"
+    this.menuTarget.style.pointerEvents = "none"
+    this.caretTarget.classList.remove("rotate-180")
+  }
+
+  // The menu is position:fixed so it escapes the horizontally-scrolling filter
+  // row (which would otherwise clip it and add a stray vertical scroll). Anchor
+  // it under the trigger, clamped to the viewport.
+  #position() {
+    const r = this.triggerTarget.getBoundingClientRect()
+    const menuW = this.menuTarget.offsetWidth || 180
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - menuW - 8))
+    this.menuTarget.style.top = `${Math.round(r.bottom + 6)}px`
+    this.menuTarget.style.left = `${Math.round(left)}px`
+  }
 
   #hasSelection() {
     return this.selected.length > 0 &&

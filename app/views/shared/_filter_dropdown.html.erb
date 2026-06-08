@@ -19,7 +19,7 @@
 
   <div data-filter-dropdown-target="menu"
        data-transition="fade-down"
-       class="absolute top-[36px] left-0 bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-[#e8e8e8] z-[200] min-w-[180px] overflow-hidden">
+       class="fixed bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-[#e8e8e8] z-[200] min-w-[180px] overflow-hidden pointer-events-none">
     <% (filter[:options] || []).each do |opt| %>
       <button data-filter-dropdown-target="option"
               data-option-id="<%= opt[:id] %>"

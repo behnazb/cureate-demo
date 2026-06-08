@@ -42,8 +42,9 @@
       <%= render "shared/view_cart_button" %>
     </header>
 
-    <%# Filter row %>
-    <div class="bg-white px-4 md:px-9 py-2 flex items-center justify-between gap-3 shrink-0 overflow-x-auto scrollbar-none">
+    <%# Filter row — horizontal scroll only; menus are position:fixed so they
+        escape this container instead of adding a stray vertical scroll. %>
+    <div class="bg-white px-4 md:px-9 py-2 flex items-center justify-between gap-3 shrink-0 overflow-x-auto overflow-y-hidden scrollbar-none">
       <div class="flex items-center gap-1.5 shrink-0">
         <span class="text-[13px] font-bold text-[#1f1f1f] shrink-0">Filter by</span>
         <% @filter_quick.each do |filter| %>
