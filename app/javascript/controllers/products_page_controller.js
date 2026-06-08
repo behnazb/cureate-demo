@@ -218,7 +218,7 @@ export default class extends Controller {
   #renderList(items) {
     const html = items.map(p => `
       <a href="${p.href}" class="no-min-h block">
-        <div class="flex items-center gap-4 p-3 rounded-xl border border-[#e8e8e8] bg-white hover:shadow-md hover:translate-x-1 transition-all cursor-pointer">
+        <div class="flex items-center gap-3 md:gap-4 p-3 rounded-xl border border-[#e8e8e8] bg-white hover:shadow-md hover:translate-x-1 transition-all cursor-pointer">
           <div class="w-[64px] h-[64px] bg-[#f7f5ef] rounded-lg flex items-center justify-center shrink-0">
             ${p.image ? `<img src="${p.image}" alt="${p.name}" class="w-full h-full object-contain mix-blend-multiply p-1">` : ""}
           </div>
@@ -227,13 +227,19 @@ export default class extends Controller {
             <p class="text-sm font-bold leading-tight truncate text-[#444955]">${p.name}</p>
             <p class="text-xs mt-0.5 text-[#777]">${[p.size, p.case_pack != null ? `Case of ${p.case_pack}` : null].filter(Boolean).join(" · ")}</p>
           </div>
-          <div class="text-right shrink-0">
-            <p class="text-sm font-bold text-[#1f1f1f]">$${p.wholesale_unit_price.toFixed(2)}</p>
-            <p class="text-[10px] text-[#777]">per unit</p>
-            ${p.wholesale_case_price != null ? `<p class="text-[10px] text-[#777]">$${p.wholesale_case_price.toFixed(2)} / case</p>` : ""}
+          <!-- Trailing: stacks on mobile (more room for the copy), side-by-side columns on desktop.
+               Both columns are fixed-width so the price never shifts when the add button morphs
+               into the qty stepper. -->
+          <div class="flex flex-col items-end gap-2 shrink-0 md:flex-row md:items-center md:gap-5">
+            <div class="text-right w-[78px] md:w-[88px] shrink-0">
+              <p class="text-sm font-bold text-[#1f1f1f]">$${p.wholesale_unit_price.toFixed(2)}</p>
+              <p class="text-[10px] text-[#777] leading-tight">per unit</p>
+              ${p.wholesale_case_price != null ? `<p class="text-[10px] text-[#777] leading-tight">$${p.wholesale_case_price.toFixed(2)} / case</p>` : ""}
+            </div>
+            <div class="w-[94px] flex justify-end shrink-0">
+              ${this.#addToCartHTML(p)}
+            </div>
           </div>
-          ${this.#addToCartHTML(p)}
-          <div class="text-lg shrink-0 text-[#a1a4aa]">›</div>
         </div>
       </a>`).join("")
     this.listViewTarget.innerHTML = html
