@@ -14,7 +14,7 @@
   <main class="flex-1 overflow-y-auto bg-white">
 
     <%# Breadcrumb + cart %>
-    <div class="px-12 pt-6 pb-2 flex items-center justify-between">
+    <div class="px-4 md:px-12 pt-6 pb-2 flex items-center justify-between gap-3">
       <span class="text-[#777] text-[14px]">
         <%= link_to "All Products", products_path, class: "hover:underline text-[#377b82]" %>
         <span class="mx-1">/</span>
@@ -27,8 +27,8 @@
       <%= render "shared/view_cart_button" %>
     </div>
 
-    <%# Main grid %>
-    <div class="grid gap-16 px-12 py-8 max-w-6xl" style="grid-template-columns: 380px 1fr">
+    <%# Main grid — stacks on mobile, two columns on md+ %>
+    <div class="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-8 md:gap-16 px-4 md:px-12 py-6 md:py-8 max-w-6xl">
 
       <%# Left: image + vendor summary %>
       <div>
@@ -124,7 +124,7 @@
           </div>
 
           <%# Quantity selector row %>
-          <div class="flex items-center gap-4 mb-4">
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mb-4">
             <span class="font-bold uppercase mr-2 text-[#777] text-[14px]">QTY</span>
             <div class="flex items-center border rounded-full overflow-hidden border-[#a1a4aa]">
               <button data-action="click->product-detail#decrement"

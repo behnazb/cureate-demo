@@ -76,6 +76,28 @@ export default class extends Controller {
     if (delta > 0) this.#emit("cart:item-added", { vendorId, productId })
   }
 
+  // Set an absolute quantity for a product in the active draft (0 removes it).
+  // Used by surfaces that edit qty directly (gallery stepper, PDP) so the qty is
+  // a single source of truth across PDP / gallery / cart.
+  setQuantity(vendorId, productId, quantity, unit = "units") {
+    const draft = this.#ensureDraft(this.state.selectedDeliveryWeek)
+    const items = [...draft.items]
+    const idx = items.findIndex(i => i.vendorId === vendorId && i.productId === productId)
+    const isNew = idx < 0
+    if (quantity <= 0) {
+      if (idx >= 0) items.splice(idx, 1)
+    } else if (idx >= 0) {
+      items[idx] = { ...items[idx], quantity, unit }
+    } else {
+      items.push({ vendorId, productId, quantity, unit })
+    }
+    draft.items = items
+    this.#persist()
+    this.#emit("cart:changed")
+    this.#emit("cart:po-changed")
+    if (quantity > 0 && isNew) this.#emit("cart:item-added", { vendorId, productId })
+  }
+
   removeItem(vendorId, productId) {
     const draft = this.#activeDraft(); if (!draft) return
     draft.items = draft.items.filter(i => !(i.vendorId === vendorId && i.productId === productId))

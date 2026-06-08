@@ -1,7 +1,17 @@
 import { Controller } from "@hotwired/stimulus"
 import { findCartController } from "./cart_controller"
 
-// product_detail_controller — quantity stepper + unit toggle + add to order on /vendors/:vendor_id/products/:id.
+// product_detail_controller — quantity stepper + unit toggle + add to order on the PDP.
+//
+// T08: qty is cart-backed so it's a single source of truth across the gallery, the
+// PDP, and the cart drawer.
+//   • On connect the stepper shows this product's quantity in the active draft.
+//   • Editing the stepper while the product is in the cart live-updates the cart
+//     (so the change is reflected on the gallery card and in the cart drawer).
+//   • Before a product is in the cart, the stepper holds a local "to add" qty;
+//     "Add to Order" commits it.
+//   • The MOQ progress bar is computed from the cart's actual vendor total — the
+//     same number the cart drawer shows — not from this single product's qty.
 export default class extends Controller {
   static targets = [
     "qty", "totalUnits", "totalPrice", "progressBar", "progressLabel",
@@ -17,40 +27,75 @@ export default class extends Controller {
   }
 
   connect() {
-    this.qty = 1
-    this.unit = "Units"
+    this.localQty = 1
+    const item = this.#cartItem()
+    this.unit = item && item.unit === "cases" ? "Cases" : "Units"
+    this.boundRender = () => this.#render()
+    document.addEventListener("cart:changed", this.boundRender)
     this.#render()
   }
+  disconnect() { document.removeEventListener("cart:changed", this.boundRender) }
 
-  decrement() { this.qty = Math.max(1, this.qty - 1); this.#render() }
-  increment() { this.qty += 1; this.#render() }
-  setUnits() { this.unit = "Units"; this.qty = 1; this.#render() }
-  setCases() { this.unit = "Cases"; this.qty = 1; this.#render() }
+  increment() {
+    if (this.#inCart()) this.#setCart(this.#cartQty() + 1)
+    else { this.localQty += 1; this.#render() }
+  }
+  decrement() {
+    if (this.#inCart()) this.#setCart(this.#cartQty() - 1) // 0 removes it
+    else { this.localQty = Math.max(1, this.localQty - 1); this.#render() }
+  }
+
+  setUnits() { this.#setUnit("Units") }
+  setCases() { this.#setUnit("Cases") }
+  #setUnit(unit) {
+    this.unit = unit
+    if (this.#inCart()) this.#setCart(this.#cartQty()) // re-commit with the new unit
+    else this.#render()
+  }
 
   add() {
-    const totalUnits = this.unit === "Cases" ? this.qty * this.unitsPerCaseValue : this.qty
-    if (totalUnits < this.minUnitsValue) return
-    findCartController(this.application)?.addItem(
-      this.vendorIdValue, this.productIdValue, this.qty, this.unit.toLowerCase()
-    )
+    this.#setCart(this.#inCart() ? this.#cartQty() : this.localQty)
     this.#showToast()
   }
 
-  #render() {
-    const totalUnits = this.unit === "Cases" ? this.qty * this.unitsPerCaseValue : this.qty
-    const totalPrice = totalUnits * this.wholesaleUnitPriceValue
-    const pct = Math.min((totalUnits / this.minUnitsValue) * 100, 100)
-    const minMet = totalUnits >= this.minUnitsValue
+  // ── Cart helpers ───────────────────────────────────────────────────────────
+  #cart()     { return findCartController(this.application) }
+  #cartItem() {
+    const c = this.#cart()
+    return c && c.items.find(i => i.vendorId === this.vendorIdValue && i.productId === this.productIdValue)
+  }
+  #cartQty()  { const c = this.#cart(); return c ? c.quantityFor(this.vendorIdValue, this.productIdValue) : 0 }
+  #inCart()   { return this.#cartQty() > 0 }
+  #setCart(q) {
+    // Triggers cart:changed → #render keeps every surface in sync.
+    this.#cart()?.setQuantity(this.vendorIdValue, this.productIdValue, q, this.unit.toLowerCase())
+  }
 
-    this.qtyTarget.textContent = this.qty
+  // ── Render ─────────────────────────────────────────────────────────────────
+  #render() {
+    const qty = this.#inCart() ? this.#cartQty() : this.localQty
+    const totalUnits = this.unit === "Cases" ? qty * this.unitsPerCaseValue : qty
+    const totalPrice = totalUnits * this.wholesaleUnitPriceValue
+
+    // MOQ progress = the vendor's actual total in the cart (matches the cart drawer).
+    const cart = this.#cart()
+    const vendorUnits = cart
+      ? cart.getTotalUnits(this.vendorIdValue, { [this.vendorIdValue]: this.unitsPerCaseValue })
+      : 0
+    const pct = Math.min((vendorUnits / this.minUnitsValue) * 100, 100)
+    const minMet = vendorUnits >= this.minUnitsValue
+    const remaining = Math.max(0, this.minUnitsValue - vendorUnits)
+
+    this.qtyTarget.textContent = qty
     this.totalUnitsTarget.textContent = `${totalUnits} unit${totalUnits === 1 ? "" : "s"} × $${this.wholesaleUnitPriceValue.toFixed(2)}`
     this.totalPriceTarget.textContent = `$${totalPrice.toFixed(2)}`
+
     this.progressBarTarget.style.width = `${pct}%`
     this.progressBarTarget.style.backgroundColor = minMet ? "#28ba93" : "#377b82"
-    this.progressLabelTarget.textContent = `${totalUnits} / ${this.minUnitsValue} units min${minMet ? " ✓" : ""}`
+    this.progressLabelTarget.textContent = `${vendorUnits} / ${this.minUnitsValue} units min${minMet ? " ✓" : ""}`
     this.progressLeftTarget.textContent = minMet
-      ? ""
-      : `Add ${this.minUnitsValue - totalUnits} more unit${this.minUnitsValue - totalUnits === 1 ? "" : "s"} to meet the minimum`
+      ? "Minimum order quantity met ✓"
+      : `Add ${remaining} more unit${remaining === 1 ? "" : "s"} to meet the minimum`
 
     // Unit toggle styling
     this.unitsButtonTarget.classList.toggle("bg-[#035257]", this.unit === "Units")
@@ -65,9 +110,12 @@ export default class extends Controller {
     this.casesButtonTarget.classList.toggle("border-[#a1a4aa]", this.unit !== "Cases")
     this.casesButtonTarget.classList.toggle("text-[#444955]",   this.unit !== "Cases")
 
-    this.addButtonTarget.style.backgroundColor = minMet ? "#28ba93" : "#c0c0c0"
-    this.addButtonTarget.style.cursor = minMet ? "pointer" : "not-allowed"
-    this.addButtonHintTarget.classList.toggle("hidden", minMet)
+    // Mix-and-match: adding always allowed — the vendor minimum accrues across
+    // flavors, so never gate the button on a single product reaching it.
+    this.addButtonTarget.style.backgroundColor = "#28ba93"
+    this.addButtonTarget.style.cursor = "pointer"
+    this.addButtonTarget.textContent = this.#inCart() ? "✓ In your order — update" : "＋ Add to Order"
+    this.addButtonHintTarget.classList.add("hidden")
   }
 
   #showToast() {
