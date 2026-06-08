@@ -9,20 +9,9 @@
       <img src="/cureate-logo.svg" alt="Cureate Connect" class="w-[126px] h-auto mb-2">
     </div>
 
-    <%
-      nav_links = [
-        { label: "Dashboard",       icon: "/icon_dashboard.svg",       href: root_path },
-        { label: "Vendors",         icon: "/icon_vendors.svg",         href: vendors_path },
-        { label: "All Orders",      icon: "/icon_all_orders.svg",      href: "#" },
-        { label: "Purchase Orders", icon: "/icon_purchase_orders.svg", href: purchase_orders_path },
-        { label: "Products",        icon: "/icon_products.svg",        href: products_path },
-        { label: "Requests",        icon: "/icon_requests.svg",        href: "#" },
-      ]
-    %>
-
     <nav class="flex flex-col gap-0.5">
-      <% nav_links.each do |link| %>
-        <% active = link[:href] != "#" && (link[:href] == "/" ? request.path == "/" : request.path.start_with?(link[:href])) %>
+      <% main_nav_links.each do |link| %>
+        <% active = nav_link_active?(link[:href]) %>
         <div>
           <%= link_to link[:href],
                 class: "flex flex-row items-center gap-3 px-3 py-2 rounded text-white text-sm transition-colors #{active ? 'bg-[#363636] opacity-100' : 'opacity-70'}" do %>

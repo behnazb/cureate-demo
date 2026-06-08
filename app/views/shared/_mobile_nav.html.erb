@@ -65,17 +65,10 @@
     </div>
 
     <nav class="flex-1 overflow-y-auto py-4">
-      <%
-        items = [
-          { label: "Dashboard",       href: "/dashboard" },
-          { label: "Products",        href: products_path },
-          { label: "Purchase Orders", href: purchase_orders_path },
-          { label: "Vendors",         href: vendors_path },
-          { label: "Requests",        href: "/requests" },
-        ]
-      %>
-      <% items.each do |item| %>
-        <% active = request.path.start_with?(item[:href]) %>
+      <%# Items come from ApplicationHelper#main_nav_links so this drawer stays
+          in lock-step with the desktop sidebar (same order, same items). %>
+      <% main_nav_links.each do |item| %>
+        <% active = nav_link_active?(item[:href]) %>
         <%= link_to item[:href],
             data: { action: "click->mobile-nav#closeDrawer" },
             class: "flex items-center justify-between px-5 py-3 text-[15px] transition-colors no-min-h #{active ? 'bg-[#363636] text-white font-bold' : 'text-[#aaa] hover:text-white hover:bg-[#2a2a2a]'}" do %>

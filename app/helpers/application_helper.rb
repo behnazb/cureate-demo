@@ -1,4 +1,25 @@
 module ApplicationHelper
+  # Canonical primary navigation — single source of truth so the desktop
+  # sidebar (_sidebar) and the mobile drawer (_mobile_nav) can never drift
+  # in order or items. Each renders its own styling; both read this list.
+  def main_nav_links
+    [
+      { label: "Dashboard",       icon: "/icon_dashboard.svg",       href: root_path },
+      { label: "Vendors",         icon: "/icon_vendors.svg",         href: vendors_path },
+      { label: "All Orders",      icon: "/icon_all_orders.svg",      href: "#" },
+      { label: "Purchase Orders", icon: "/icon_purchase_orders.svg", href: purchase_orders_path },
+      { label: "Products",        icon: "/icon_products.svg",        href: products_path },
+      { label: "Requests",        icon: "/icon_requests.svg",        href: "#" },
+    ]
+  end
+
+  # Active-state rule shared by both navs. "#" placeholders never match, and
+  # "/" only matches the exact root (so it doesn't match every path via start_with?).
+  def nav_link_active?(href)
+    return false if href == "#"
+    href == "/" ? request.path == "/" : request.path.start_with?(href)
+  end
+
   # Strips protocol + leading "www." for compact display.
   def display_url(url)
     return "" if url.blank?
