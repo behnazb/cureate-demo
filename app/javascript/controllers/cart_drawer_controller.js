@@ -374,8 +374,7 @@ export default class extends Controller {
       <div class="flex items-center justify-between px-4 py-3">
         <span class="text-[14px] font-bold text-[#1f1f1f]">Purchase Order Total</span>
         <span class="text-[14px] font-bold text-[#1f1f1f]">$${total.toFixed(2)}</span>
-      </div>
-      <div class="h-[100px]"></div>`
+      </div>`
   }
 
   #renderSuccess() {

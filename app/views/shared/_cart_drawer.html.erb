@@ -87,8 +87,8 @@
           </button>
         </div>
 
-        <%# Lead: delivery week (primary) + auto-assigned PO# (secondary metadata) %>
-        <div class="border-b-2 shrink-0 border-[#e6e6e6]">
+        <%# Lead: delivery week (primary) + PO# — sticky below the header (T10) %>
+        <div class="sticky top-[50px] z-10 border-b-2 border-[#e6e6e6] bg-[#f7f5ef]">
           <div data-cart-drawer-target="deliveryBanner" class="px-4 py-3">
             <div class="flex items-center gap-1.5">
               <span class="text-[12px] text-[#777]">Ordering for delivery week of</span>
@@ -172,8 +172,8 @@
         </div>
       </div>
 
-      <%# Sticky bottom CTA %>
-      <div class="shrink-0">
+      <%# Sticky bottom CTA — delineated from the scrolling content by a soft shadow %>
+      <div class="shrink-0 relative z-10 shadow-[0_-6px_16px_rgba(0,0,0,0.05)]">
         <div class="flex items-center justify-between px-4 bg-[#beead8] h-[50px]">
           <div class="flex items-center gap-3" data-cart-drawer-target="minStatus">
             <span class="text-[#1f1f1f] text-[14px]">Add more items to meet min order quantity</span>
@@ -232,8 +232,8 @@
           <span data-cart-drawer-target="confirmationPOId" class="text-[11px] font-bold text-[#035257]"></span>
         </div>
       </div>
-      <div data-cart-drawer-target="confirmationBody" class="flex-1 overflow-y-auto py-4 flex flex-col gap-4"></div>
-      <div class="absolute bottom-0 left-0 right-0 border-t-2 border-[#e6e6e6] px-4 py-4 flex flex-col gap-3 bg-[#f7f5ef]">
+      <div data-cart-drawer-target="confirmationBody" class="flex-1 min-h-0 overflow-y-auto py-4 space-y-4"></div>
+      <div class="shrink-0 relative z-10 border-t-2 border-[#e6e6e6] px-4 py-4 flex flex-col gap-3 bg-[#f7f5ef] shadow-[0_-6px_16px_rgba(0,0,0,0.05)]">
         <button data-action="click->cart-drawer#submitPO"
                 class="w-full h-[49px] rounded-full bg-[#28ba93] text-white text-[16px] font-bold flex items-center justify-center gap-2 hover:bg-[#22a882] transition-colors no-min-h hover:scale-[1.01] active:scale-[0.98]">
           Submit PO for Review
