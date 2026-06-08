@@ -201,8 +201,8 @@ export default class extends Controller {
     Object.entries(groups).forEach(([cat, products]) => {
       html += `<section>
         <div class="flex items-center justify-between px-4 md:px-9 pt-6 pb-1">
-          <h2 class="text-[20px] font-black text-[#1f1f1f] uppercase tracking-tight">${cat}</h2>
-          <a class="text-[15px] font-bold text-[#28ba93] whitespace-nowrap no-min-h">View all ›</a>
+          <h2 class="text-[16px] font-black text-[#1f1f1f] uppercase tracking-tight">${cat}</h2>
+          <a class="text-[12px] font-bold text-[#28ba93] whitespace-nowrap no-min-h">View all ›</a>
         </div>
         <div class="md:hidden flex gap-3 overflow-x-auto scrollbar-none px-4 pb-4 pt-2" style="scroll-snap-type:x mandatory; scroll-padding-left:1rem">
           ${products.map(p => `<div style="scroll-snap-align:start;flex-shrink:0;width:160px">${this.#productCardHTML(p)}</div>`).join("")}
