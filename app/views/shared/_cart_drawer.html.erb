@@ -37,6 +37,10 @@
         {
           id: p.id, name: p.name, image: p.image,
           wholesale_unit_price: p.wholesale_unit_price,
+          # Per-product MOQ scaffold (T09) — sourced from seed product data until
+          # Michael's MOQ service provides it. TODO: swap to the real per-product MOQ.
+          case_minimum:   p.case_minimum || 1,
+          units_per_case: p.units_per_case || v.order_rules&.dig(:units_per_case) || 1,
         }
       }.compact,
     }

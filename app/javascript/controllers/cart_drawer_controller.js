@@ -270,7 +270,17 @@ export default class extends Controller {
          </div>`
       : `<span class="font-bold shrink-0 text-[#035257] text-[11px]">Add ${remaining} more item${remaining === 1 ? "" : "s"} to meet min</span>`
 
-    const rows = g.products.map(i => `
+    const rows = g.products.map(i => {
+      // Per-line MOQ signal (T09) — text only, additive to the vendor-level bar.
+      // Per-product minimum = case_minimum × units_per_case (seed-data scaffold until
+      // Michael's MOQ service provides per-product MOQ data).
+      const upc = i.product.units_per_case || 1
+      const lineUnits = i.unit === "cases" ? i.quantity * upc : i.quantity
+      const lineRemaining = Math.max(0, (i.product.case_minimum || 1) * upc - lineUnits)
+      const moqTag = lineRemaining === 0
+        ? `<span class="text-[11px] font-bold text-[#28ba93]">Min met</span>`
+        : `<span class="text-[11px] text-[#888780]">Add ${lineRemaining} more</span>`
+      return `
       <div class="flex items-center justify-between px-4 py-3 bg-[#fbf9f6]" style="margin-bottom: 1px">
         <div class="flex items-center gap-2" style="width: 65%">
           <div class="w-[65px] h-[60px] shrink-0 flex items-center justify-center">
@@ -280,6 +290,7 @@ export default class extends Controller {
             <span class="font-bold text-[#035257] text-[11px]">${g.vendor.name}</span>
             <span class="font-bold leading-tight text-[#444955] text-[11px]">${i.product.name}</span>
             <span class="text-[#1f1f1f] text-[11px]">$${(i.product.wholesale_unit_price * i.quantity).toFixed(2)}</span>
+            ${moqTag}
           </div>
         </div>
         <span class="inline-flex" data-controller="add-to-cart"
@@ -298,7 +309,8 @@ export default class extends Controller {
             </button>
           </div>
         </span>
-      </div>`).join("")
+      </div>`
+    }).join("")
 
     return `<div class="bg-white flex flex-col" style="border-radius: 20px; box-shadow: 2px 2px 10px 0px rgba(156,153,153,0.25);">
       <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3">
