@@ -92,9 +92,9 @@ export default class extends Controller {
 
     this.progressBarTarget.style.width = `${pct}%`
     this.progressBarTarget.style.backgroundColor = minMet ? "#28ba93" : "#377b82"
-    this.progressLabelTarget.textContent = `${vendorUnits} / ${this.minUnitsValue} units min${minMet ? " ✓" : ""}`
-    this.progressLeftTarget.textContent = minMet
-      ? "Minimum order quantity met ✓"
+    this.progressLabelTarget.innerHTML = `${vendorUnits} / ${this.minUnitsValue} units min${minMet ? ` <span class="icon-check w-[11px] h-[11px] align-middle"></span>` : ""}`
+    this.progressLeftTarget.innerHTML = minMet
+      ? `Minimum order quantity met <span class="icon-check w-[11px] h-[11px] align-middle"></span>`
       : `Add ${remaining} more unit${remaining === 1 ? "" : "s"} to meet the minimum`
 
     // Unit toggle styling
@@ -114,7 +114,9 @@ export default class extends Controller {
     // flavors, so never gate the button on a single product reaching it.
     this.addButtonTarget.style.backgroundColor = "#28ba93"
     this.addButtonTarget.style.cursor = "pointer"
-    this.addButtonTarget.textContent = this.#inCart() ? "✓ In your order — update" : "＋ Add to Order"
+    this.addButtonTarget.innerHTML = this.#inCart()
+      ? `<span class="icon-check w-[15px] h-[15px]"></span>In your order — update`
+      : "＋ Add to Order"
     this.addButtonHintTarget.classList.add("hidden")
   }
 

@@ -342,7 +342,7 @@ export default class extends Controller {
         <div class="flex items-center justify-between px-4 py-3">
           <div class="flex items-center gap-2">
             <div class="w-5 h-5 rounded-full bg-[#28ba93] flex items-center justify-center shrink-0">
-              <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="icon-check w-[11px] h-[11px] text-white"></span>
             </div>
             <span class="text-[14px] font-bold text-[#777]">${g.vendor.name}</span>
           </div>

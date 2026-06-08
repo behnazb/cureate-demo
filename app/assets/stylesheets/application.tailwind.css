@@ -98,3 +98,20 @@ button, a { min-height: 44px; }
   opacity: 1;
   transform: translateX(0);
 }
+
+/* ─── Brand checkmark ──────────────────────────────────────────────────────────
+   Masks public/icon_checkmark.svg so the single asset can render in the current
+   text color at any size. Usage: <span class="icon-check w-3 h-3 text-white">.
+   Set the size with w-/h- utilities and the color with text-* (or inherit). */
+.icon-check {
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask-image: url("/icon_checkmark.svg");
+          mask-image: url("/icon_checkmark.svg");
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+}
