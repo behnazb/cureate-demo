@@ -13,8 +13,8 @@
 
   <main class="flex-1 overflow-y-auto bg-white">
 
-    <%# Breadcrumb + cart %>
-    <div class="px-4 md:px-12 pt-6 pb-2 flex items-center justify-between gap-3">
+    <%# Breadcrumb + cart — sticky so the cart stays visible on scroll (T12) %>
+    <div class="sticky top-0 z-20 bg-white border-b border-[#e8e8e8] px-4 md:px-12 py-3 flex items-center justify-between gap-3">
       <span class="text-[#777] text-[14px]">
         <%= link_to "All Products", products_path, class: "hover:underline text-[#377b82]" %>
         <span class="mx-1">/</span>

@@ -24,22 +24,26 @@
 
   <div class="flex-1 overflow-y-auto bg-white">
 
-    <%# Breadcrumb %>
-    <div class="border-b border-[#e8e8e8]">
-      <nav aria-label="Breadcrumb" class="max-w-4xl mx-auto px-4 md:px-9 py-3">
-        <ol class="flex items-center gap-2 text-[13px]">
-          <li>
-            <%= link_to vendors_path, class: "text-[#28ba93] font-bold hover:underline flex items-center gap-1 no-min-h" do %>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Vendors
-            <% end %>
-          </li>
-          <li class="text-[#ccc]">/</li>
-          <li class="text-[#1f1f1f] font-bold truncate"><%= @vendor.name %></li>
-        </ol>
-      </nav>
+    <%# Breadcrumb — sticky so the cart stays visible while scrolling to the
+        product gallery at the bottom (T12) %>
+    <div class="sticky top-0 z-20 bg-white border-b border-[#e8e8e8]">
+      <div class="max-w-4xl mx-auto px-4 md:px-9 py-3 flex items-center justify-between gap-3">
+        <nav aria-label="Breadcrumb" class="min-w-0">
+          <ol class="flex items-center gap-2 text-[13px]">
+            <li>
+              <%= link_to vendors_path, class: "text-[#28ba93] font-bold hover:underline flex items-center gap-1 no-min-h" do %>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Vendors
+              <% end %>
+            </li>
+            <li class="text-[#ccc]">/</li>
+            <li class="text-[#1f1f1f] font-bold truncate"><%= @vendor.name %></li>
+          </ol>
+        </nav>
+        <%= render "shared/view_cart_button" %>
+      </div>
     </div>
 
     <main class="max-w-4xl mx-auto px-4 md:px-9">
