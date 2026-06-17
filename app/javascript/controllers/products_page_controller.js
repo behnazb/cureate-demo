@@ -232,9 +232,7 @@ export default class extends Controller {
                into the qty stepper. -->
           <div class="flex flex-col items-end gap-2 shrink-0 md:flex-row md:items-center md:gap-5">
             <div class="text-right w-[78px] md:w-[88px] shrink-0">
-              <p class="text-sm font-bold text-[#1f1f1f]">$${p.wholesale_unit_price.toFixed(2)}</p>
-              <p class="text-[10px] text-[#777] leading-tight">per unit</p>
-              ${p.wholesale_case_price != null ? `<p class="text-[10px] text-[#777] leading-tight">$${p.wholesale_case_price.toFixed(2)} / case</p>` : ""}
+              ${this.#listPricingHTML(p)}
             </div>
             <div class="w-[94px] flex justify-end shrink-0">
               ${this.#addToCartHTML(p)}
@@ -243,6 +241,52 @@ export default class extends Controller {
         </div>
       </a>`).join("")
     this.listViewTarget.innerHTML = html
+  }
+
+  // Minimum orderable quantity + the price of that orderable unit, mirroring the product
+  // detail page. Case-ordered products (case_minimum set) show cases & case price; unit-
+  // ordered products show units & unit price.
+  #minPricingHTML(p) {
+    const itemLabel = p.item_label || "unit"
+    if (p.case_minimum != null) {
+      const cm = p.case_minimum
+      const cases = `${cm} ${cm === 1 ? "Case" : "Cases"}`
+      if (p.wholesale_case_price != null) {
+        const upc = p.units_per_case || 0
+        let sub = ""
+        if (itemLabel !== "case" && upc) {
+          const itemPrice = ((p.units_per_item || 1) / upc) * p.wholesale_case_price
+          sub = `<p class="text-[#999] text-[12px]">$${itemPrice.toFixed(2)} / ${itemLabel}</p>`
+        }
+        return `<p class="text-[13px]"><span class="font-bold text-[#444955]">${cases}</span> <span class="text-[#777]">· $${p.wholesale_case_price.toFixed(2)} / Case</span></p>${sub}`
+      }
+      return `<p class="text-[13px]"><span class="font-bold text-[#444955]">${cases}</span> <span class="text-[#777]">· $${p.wholesale_unit_price.toFixed(2)} / ${p.unit_label || "unit"}</span></p>`
+    }
+    const um = p.unit_minimum || 1
+    return `<p class="text-[13px]"><span class="font-bold text-[#444955]">${um} ${um === 1 ? "Unit" : "Units"}</span> <span class="text-[#777]">· $${p.wholesale_unit_price.toFixed(2)} / ${p.unit_label || "unit"}</span></p>`
+  }
+
+  // Compact pricing for the list/row view: order-basis price + the minimum, right-aligned.
+  #listPricingHTML(p) {
+    const itemLabel = p.item_label || "unit"
+    if (p.case_minimum != null) {
+      const cm = p.case_minimum
+      const price = (p.wholesale_case_price != null ? p.wholesale_case_price : p.wholesale_unit_price).toFixed(2)
+      const upc = p.units_per_case || 0
+      let sub = ""
+      if (p.wholesale_case_price != null && itemLabel !== "case" && upc) {
+        const itemPrice = ((p.units_per_item || 1) / upc) * p.wholesale_case_price
+        sub = `<p class="text-[10px] text-[#777] leading-tight">$${itemPrice.toFixed(2)}/${itemLabel}</p>`
+      }
+      return `<p class="text-sm font-bold text-[#1f1f1f]">$${price}</p>
+              <p class="text-[10px] text-[#777] leading-tight">/ Case</p>
+              ${sub}
+              <p class="text-[10px] text-[#777] leading-tight">Min ${cm} ${cm === 1 ? "case" : "cases"}</p>`
+    }
+    const um = p.unit_minimum || 1
+    return `<p class="text-sm font-bold text-[#1f1f1f]">$${p.wholesale_unit_price.toFixed(2)}</p>
+            <p class="text-[10px] text-[#777] leading-tight">per ${p.unit_label || "unit"}</p>
+            <p class="text-[10px] text-[#777] leading-tight">Min ${um} ${um === 1 ? "unit" : "units"}</p>`
   }
 
   #productCardHTML(p) {
@@ -255,7 +299,7 @@ export default class extends Controller {
         <div class="flex-1 flex flex-col overflow-hidden p-[10px] gap-[8px]">
           <p class="font-bold text-[#377b82] text-[14px]">${p.vendor_name}</p>
           <p class="font-bold leading-tight text-[#444955] text-[12px] line-clamp-2 min-h-[1.5rem]">${p.name}</p>
-          <p class="text-[#777] text-[13px]">$${p.wholesale_unit_price.toFixed(2)} / unit</p>
+          <div class="mt-auto flex flex-col gap-[2px]">${this.#minPricingHTML(p)}</div>
         </div>
       </div>
     </a>`

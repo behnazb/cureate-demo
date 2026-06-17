@@ -1,35 +1,35 @@
 import { Controller } from "@hotwired/stimulus"
 import { findCartController } from "./cart_controller"
 
-// product_detail_controller — quantity stepper + unit toggle + add to order on the PDP.
+// product_detail_controller — quantity stepper + add to order on the PDP.
 //
-// T08: qty is cart-backed so it's a single source of truth across the gallery, the
-// PDP, and the cart drawer.
-//   • On connect the stepper shows this product's quantity in the active draft.
-//   • Editing the stepper while the product is in the cart live-updates the cart
-//     (so the change is reflected on the gallery card and in the cart drawer).
-//   • Before a product is in the cart, the stepper holds a local "to add" qty;
-//     "Add to Order" commits it.
-//   • The MOQ progress bar is computed from the cart's actual vendor total — the
-//     same number the cart drawer shows — not from this single product's qty.
+// Mirrors the cart drawer's per-item model: the buyer adds whole orderable ITEMS
+// (a 2-pack, a case, a unit), never individual sub-units. Pricing and the MOQ
+// progress are computed exactly as the cart drawer computes them, so the PDP, the
+// gallery card, and the cart drawer always agree.
+//   • qty is cart-backed (single source of truth across surfaces).
+//   • Each item = units_per_item individual units; a full case == the case price.
+//   • MOQ is gated on the vendor's running cart total — dollars for a $-minimum
+//     vendor, otherwise individual units toward the case minimum.
 export default class extends Controller {
   static targets = [
     "qty", "totalUnits", "totalPrice", "progressBar", "progressLabel",
-    "progressLeft", "minMetCheck", "addButton", "addButtonHint",
-    "unitsButton", "casesButton", "toast",
+    "progressLeft", "addButton", "addButtonHint", "toast",
   ]
   static values = {
     vendorId:           String,
     productId:          String,
     unitsPerCase:       Number,
+    unitsPerItem:       Number,
     minUnits:           Number,
+    minAmount:          Number,
     wholesaleUnitPrice: Number,
+    wholesaleCasePrice: Number,
+    itemLabel:          String,
   }
 
   connect() {
     this.localQty = 1
-    const item = this.#cartItem()
-    this.unit = item && item.unit === "cases" ? "Cases" : "Units"
     this.boundRender = () => this.#render()
     document.addEventListener("cart:changed", this.boundRender)
     this.#render()
@@ -45,73 +45,79 @@ export default class extends Controller {
     else { this.localQty = Math.max(1, this.localQty - 1); this.#render() }
   }
 
-  setUnits() { this.#setUnit("Units") }
-  setCases() { this.#setUnit("Cases") }
-  #setUnit(unit) {
-    this.unit = unit
-    if (this.#inCart()) this.#setCart(this.#cartQty()) // re-commit with the new unit
-    else this.#render()
-  }
-
   add() {
     this.#setCart(this.#inCart() ? this.#cartQty() : this.localQty)
     this.#showToast()
   }
 
   // ── Cart helpers ───────────────────────────────────────────────────────────
-  #cart()     { return findCartController(this.application) }
-  #cartItem() {
-    const c = this.#cart()
-    return c && c.items.find(i => i.vendorId === this.vendorIdValue && i.productId === this.productIdValue)
-  }
-  #cartQty()  { const c = this.#cart(); return c ? c.quantityFor(this.vendorIdValue, this.productIdValue) : 0 }
-  #inCart()   { return this.#cartQty() > 0 }
-  #setCart(q) {
-    // Triggers cart:changed → #render keeps every surface in sync.
-    this.#cart()?.setQuantity(this.vendorIdValue, this.productIdValue, q, this.unit.toLowerCase())
+  #cart()    { return findCartController(this.application) }
+  #cartQty() { const c = this.#cart(); return c ? c.quantityFor(this.vendorIdValue, this.productIdValue) : 0 }
+  #inCart()  { return this.#cartQty() > 0 }
+  // Always stored as whole items (unit "units"); the cart converts via units_per_item.
+  #setCart(q) { this.#cart()?.setQuantity(this.vendorIdValue, this.productIdValue, q, "units") }
+
+  // Price of one orderable item, prorated from the case price so a full case == case price.
+  #itemPrice() {
+    const upc = this.unitsPerCaseValue || 1
+    const itemUnits = this.unitsPerItemValue || 1
+    return this.wholesaleCasePriceValue
+      ? (itemUnits / upc) * this.wholesaleCasePriceValue
+      : this.wholesaleUnitPriceValue * itemUnits
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   #render() {
     const qty = this.#inCart() ? this.#cartQty() : this.localQty
-    const totalUnits = this.unit === "Cases" ? qty * this.unitsPerCaseValue : qty
-    const totalPrice = totalUnits * this.wholesaleUnitPriceValue
-
-    // MOQ progress = the vendor's actual total in the cart (matches the cart drawer).
-    const cart = this.#cart()
-    const vendorUnits = cart
-      ? cart.getTotalUnits(this.vendorIdValue, { [this.vendorIdValue]: this.unitsPerCaseValue })
-      : 0
-    const pct = Math.min((vendorUnits / this.minUnitsValue) * 100, 100)
-    const minMet = vendorUnits >= this.minUnitsValue
-    const remaining = Math.max(0, this.minUnitsValue - vendorUnits)
+    const upc = this.unitsPerCaseValue || 1
+    const itemUnits = this.unitsPerItemValue || 1
+    const label = this.itemLabelValue || "unit"
+    const itemPrice = this.#itemPrice()
 
     this.qtyTarget.textContent = qty
-    this.totalUnitsTarget.textContent = `${totalUnits} unit${totalUnits === 1 ? "" : "s"} × $${this.wholesaleUnitPriceValue.toFixed(2)}`
-    this.totalPriceTarget.textContent = `$${totalPrice.toFixed(2)}`
+    this.totalUnitsTarget.textContent = `${qty} ${label}${qty === 1 ? "" : "s"} × $${itemPrice.toFixed(2)}`
+    this.totalPriceTarget.textContent = `$${(itemPrice * qty).toFixed(2)}`
+
+    // Vendor totals across the cart, computed exactly like the cart drawer. Item metadata
+    // is uniform per vendor, so this product's values represent the whole vendor.
+    const cart = this.#cart()
+    const vItems = cart ? cart.items.filter(i => i.vendorId === this.vendorIdValue) : []
+    const lineUnits = (i) => i.unit === "cases" ? i.quantity * upc : i.quantity * itemUnits
+    const vendorUnits = vItems.reduce((s, i) => s + lineUnits(i), 0)
+    const vendorTotal = vItems.reduce((s, i) => {
+      const lu = lineUnits(i)
+      return s + (this.wholesaleCasePriceValue ? (lu / upc) * this.wholesaleCasePriceValue : this.wholesaleUnitPriceValue * lu)
+    }, 0)
+
+    let pct, minMet, labelHtml, leftHtml
+    if (this.minAmountValue && this.minAmountValue > 0) {
+      // Dollar-gated MOQ (mirrors the cart).
+      minMet = vendorTotal >= this.minAmountValue
+      pct = Math.min((vendorTotal / this.minAmountValue) * 100, 100)
+      const remaining = Math.max(0, this.minAmountValue - vendorTotal)
+      labelHtml = `$${vendorTotal.toFixed(2)} / $${this.minAmountValue} min`
+      leftHtml = minMet
+        ? `Minimum order met <span class="icon-check w-[11px] h-[11px] align-middle"></span>`
+        : `Add $${remaining.toFixed(2)} more to meet $${this.minAmountValue} MOQ`
+    } else {
+      // Item/case-gated MOQ (mirrors the cart): count whole items toward the case minimum.
+      minMet = vendorUnits >= this.minUnitsValue
+      pct = this.minUnitsValue > 0 ? Math.min((vendorUnits / this.minUnitsValue) * 100, 100) : 100
+      const minItems = Math.max(1, Math.round(this.minUnitsValue / itemUnits))
+      const remItems = Math.max(0, Math.ceil(minItems - vendorUnits / itemUnits))
+      const minCases = Math.max(1, Math.round(this.minUnitsValue / upc))
+      labelHtml = `${vendorUnits} / ${this.minUnitsValue} units min`
+      leftHtml = minMet
+        ? `Minimum order quantity met <span class="icon-check w-[11px] h-[11px] align-middle"></span>`
+        : `Add ${remItems} more ${label}${remItems === 1 ? "" : "s"} to meet ${minCases} Case${minCases === 1 ? "" : "s"} MOQ`
+    }
 
     this.progressBarTarget.style.width = `${pct}%`
     this.progressBarTarget.style.backgroundColor = minMet ? "#28ba93" : "#377b82"
-    this.progressLabelTarget.innerHTML = `${vendorUnits} / ${this.minUnitsValue} units min${minMet ? ` <span class="icon-check w-[11px] h-[11px] align-middle"></span>` : ""}`
-    this.progressLeftTarget.innerHTML = minMet
-      ? `Minimum order quantity met <span class="icon-check w-[11px] h-[11px] align-middle"></span>`
-      : `Add ${remaining} more unit${remaining === 1 ? "" : "s"} to meet the minimum`
+    this.progressLabelTarget.innerHTML = labelHtml + (minMet ? ` <span class="icon-check w-[11px] h-[11px] align-middle"></span>` : "")
+    this.progressLeftTarget.innerHTML = leftHtml
 
-    // Unit toggle styling
-    this.unitsButtonTarget.classList.toggle("bg-[#035257]", this.unit === "Units")
-    this.unitsButtonTarget.classList.toggle("text-white",   this.unit === "Units")
-    this.unitsButtonTarget.classList.toggle("border",       this.unit !== "Units")
-    this.unitsButtonTarget.classList.toggle("border-[#a1a4aa]", this.unit !== "Units")
-    this.unitsButtonTarget.classList.toggle("text-[#444955]",   this.unit !== "Units")
-
-    this.casesButtonTarget.classList.toggle("bg-[#035257]", this.unit === "Cases")
-    this.casesButtonTarget.classList.toggle("text-white",   this.unit === "Cases")
-    this.casesButtonTarget.classList.toggle("border",       this.unit !== "Cases")
-    this.casesButtonTarget.classList.toggle("border-[#a1a4aa]", this.unit !== "Cases")
-    this.casesButtonTarget.classList.toggle("text-[#444955]",   this.unit !== "Cases")
-
-    // Mix-and-match: adding always allowed — the vendor minimum accrues across
-    // flavors, so never gate the button on a single product reaching it.
+    // Mix-and-match / vendor-level minimum: adding is always allowed.
     this.addButtonTarget.style.backgroundColor = "#28ba93"
     this.addButtonTarget.style.cursor = "pointer"
     this.addButtonTarget.innerHTML = this.#inCart()

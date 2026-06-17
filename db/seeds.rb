@@ -26,6 +26,7 @@ twobetties = Vendor.new(
   certifications: ["Woman-Owned Business"],
   categories: ["Snacks"],
   delivery_schedule: "Mon to Fri",
+  delivery_days: %w[Mon Tue Wed Thu Fri], preferred_delivery_day: "Mon",
   min_order_quantity: "2 cases",
   logo: "/vendors/2betties/logo.jpeg",
   about: "2Betties makes better-for-you snacking easy and joyful. Certified Gluten-Free, Non-GMO, and Women-Owned.",
@@ -33,8 +34,8 @@ twobetties = Vendor.new(
   story: "2Betties started in a college dorm room — co-founders on a mission to raise the bar one better bite at a time.",
   goals: ["Retail Product"],
   order_rules: {
-    min_cases: 2, units_per_case: 6, min_units: 12, mix_and_match: true,
-    mix_and_match_note: "Minimum 2 cases (12 units) required. Flavors are interchangeable to meet the minimum.",
+    min_cases: 1, units_per_case: 36, min_units: 36, mix_and_match: true,
+    mix_and_match_note: "Minimum 1 case (36 units) required. Flavors are interchangeable to meet the minimum.",
   },
 )
 
@@ -48,8 +49,10 @@ twobetties_flavors = [
 twobetties.products = twobetties_flavors.map { |f|
   Product.new(
     id: f[:id], name: f[:name], upc: f[:upc], size: "1.4 oz",
-    wholesale_unit_price: 1.89, msrp: 2.99, case_pack: 6, units_per_case: 6,
-    wholesale_case_price: 68.20, case_minimum: 1,
+    # Case Pack = 6 packs per case; a case = 36 units (6 packs × 6 units/pack).
+    wholesale_unit_price: 1.89, msrp: 2.99, case_pack: 6, units_per_case: 36,
+    wholesale_case_price: 68.20, case_minimum: 1, unit_label: "unit",
+    units_per_item: 12, item_label: "2-pack",   # 1 click = one 2-pack = 12 units; case = 3 two-packs
     storage: "Dry/Ambient: 7-12 months",
     allergens: %w[Dairy-Free Gluten-Free Peanut-Free Soy-Free Egg-Free],
     dietary: ["Paleo", "Low-Fat", "Low-Carb", "Low-Sugar", "Low-Sodium"],
@@ -70,6 +73,7 @@ ethiopian = Vendor.new(
   categories: ["Dry Goods"],
   delivery_area: "Washington D.C., Baltimore, Culpeper-Charlottesville",
   delivery_schedule: "Self-distribute",
+  delivery_days: %w[Mon Tue Wed Thu Fri], preferred_delivery_day: "Mon",
   min_order_quantity: "1 case (12 units)",
   production: "Takoma Park Silver Spring Community Kitchen, 310 Tulip Ave, Takoma Park, MD",
   seasonal_offerings: "Farmers Markets, Holiday Markets, online",
@@ -90,7 +94,8 @@ ethiopian.products = [
   Product.new(
     id: "10616", name: "Spicy Red Lentil Stew", upc: "860012111305", size: "3.5 oz",
     wholesale_unit_price: 6.29, msrp: 8.99, case_pack: 12, units_per_case: 12,
-    wholesale_case_price: 75.48, case_minimum: 1,
+    wholesale_case_price: 75.48, case_minimum: 1, unit_label: "pack",
+    units_per_item: 12, item_label: "case",   # sold only by the case (12 packs); 1 click = 1 case
     storage: "1 year shelf life, no need for refrigeration",
     allergens: %w[Dairy-Free Peanut-Free Tree\ Nut-Free Seafood-Free Sesame-Free Egg-Free],
     dietary: ["Vegan", "Vegetarian", "Low-Sugar"],
@@ -100,7 +105,8 @@ ethiopian.products = [
   Product.new(
     id: "10617", name: "Mild Split Pea Stew", upc: "860012111312", size: "3.5 oz",
     wholesale_unit_price: 6.29, msrp: 8.99, case_pack: 12, units_per_case: 12,
-    wholesale_case_price: 75.48, case_minimum: 1,
+    wholesale_case_price: 75.48, case_minimum: 1, unit_label: "pack",
+    units_per_item: 12, item_label: "case",   # sold only by the case (12 packs); 1 click = 1 case
     storage: "1 year shelf life, no need for refrigeration",
     allergens: %w[Dairy-Free Peanut-Free Tree\ Nut-Free Seafood-Free Sesame-Free Egg-Free],
     dietary: ["Vegan", "Vegetarian", "Low-Sugar"],
@@ -124,6 +130,7 @@ open_seas = Vendor.new(
   categories: ["Beverages"],
   delivery_area: "Anne Arundel, Baltimore County, Wicomico and Worcester. Free Shipping on 4 cases. Delivery fee $13.25",
   delivery_schedule: "Wed to Fri / Delivery every Fri",
+  delivery_days: %w[Wed Thu Fri], preferred_delivery_day: "Wed",
   min_order_quantity: "2 case minimum",
   production: "Open Seas Coffee Roasters, 100 Pier Ave, Stevensville, MD 21666",
   logo: "/vendors/open-seas-coffee-roasters/logo.png",
@@ -134,8 +141,12 @@ open_seas = Vendor.new(
   goals: ["Retail Product", "Back-of-House Product"],
   social_links: { instagram: true, facebook: true },
   order_rules: {
+    # Open Seas uses a dollar-amount MOQ, enforced in the cart. The case/unit fields are
+    # retained so the product detail order flow keeps working until it's migrated to the
+    # dollar gate too.
+    min_amount: 78,
     min_cases: 2, units_per_case: 12, min_units: 24, mix_and_match: false,
-    mix_and_match_note: "Minimum 2 cases (24 units) required.",
+    mix_and_match_note: "Minimum order of $78 (2 cases / 24 units) required.",
   },
 )
 
@@ -144,6 +155,7 @@ open_seas.products = [
     id: "16523", name: "Cold Brew, Can", upc: "12345678905", size: "12 oz",
     wholesale_unit_price: 3.25, msrp: 5.25, case_pack: 12, units_per_case: 12,
     wholesale_case_price: 39.00, case_minimum: 2,
+    units_per_item: 12, item_label: "case",   # sold by the case (12 cans); 1 click = 1 case, no individual units
     storage: "Dry/Ambient: 7-12 months, Cold: 7-12 months, Warm: 7-12 months",
     allergens: %w[Dairy-Free Gluten-Free Peanut-Free Tree\ Nut-Free Seafood-Free Sesame-Free Soy-Free Casein-Free Egg-Free],
     dietary: ["Vegan", "Vegetarian", "Organic / Naturally Grown", "Paleo", "Keto-Friendly", "Low-Fat", "Low-Carb", "Low-Sugar", "Low-Sodium"],
@@ -196,7 +208,7 @@ PurchaseOrder.all.concat([
   PurchaseOrder.new(
     id: "006-STEPH-00001",
     date_range: { start: "03/15/2026", end: "03/21/2026" },
-    status: "Delivered", total: 889.00,
+    status: "Delivered", total: 889.00, fulfillment_method: "Delivery",
     cureator_name: "Cureate DMV", created_at: "2026-03-15",
     delivery_date: "2026-03-18", delivery_date_short: "Mar 18",
     line_items: [

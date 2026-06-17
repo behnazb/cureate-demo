@@ -18,6 +18,12 @@
       allergens:  p.allergens || [],
       wholesale_unit_price: p.wholesale_unit_price,
       wholesale_case_price: p.wholesale_case_price,
+      case_minimum: p.case_minimum,
+      unit_minimum: p.unit_minimum,
+      unit_label: p.unit_label,
+      units_per_case: p.units_per_case,
+      units_per_item: p.units_per_item || 1,
+      item_label: p.item_label,
       href:       vendor_product_path(p.vendor.id, p.id),
     }
   end

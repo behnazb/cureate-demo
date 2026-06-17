@@ -14,6 +14,7 @@ class Vendor
   ATTRS = %i[
     id name location address website business_type revenue employees
     certifications categories delivery_schedule delivery_area min_order_quantity
+    delivery_days preferred_delivery_day
     logo about story owned goals order_rules products social_links
     insurance health_clearance production seasonal_offerings growth_goals
   ].freeze

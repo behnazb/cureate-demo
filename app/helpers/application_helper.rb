@@ -50,25 +50,42 @@ module ApplicationHelper
     "—"
   end
 
-  # Maps PO status to a Tailwind class pair (bg + text colors)
-  PO_STATUS_CLASSES = {
-    "Draft"      => "bg-[#e8e8e8] text-[#555]",
-    "In Review"  => "bg-[#fef3c7] text-[#92400e]",
-    "Processing" => "bg-[#fde8dc] text-[#a33500]",
-    "Confirmed"  => "bg-[#d4f5e9] text-[#065f46]",
-    "Delivered"  => "bg-[#dbeafe] text-[#1e40af]",
-    "Invoiced"   => "bg-[#ede9fe] text-[#5b21b6]",
-    "Paid"       => "bg-[#d1fae5] text-[#065f46]",
-    "Cancelled"  => "bg-[#fce8e8] text-[#991b1b]",
+  # Palette A status colors — soft tinted chip (bg) + dark same-family text, all at a
+  # consistent saturation. Keyed by underlying status, plus the two fulfillment methods
+  # (Delivery / Shipping) so they read as distinct pills. Applied via inline style so
+  # arbitrary hexes render without a Tailwind CSS rebuild.
+  PO_STATUS_COLORS = {
+    "Draft"      => ["#e8e8e8", "#555555"],   # neutral grey
+    "In Review"  => ["#fef3c7", "#92400e"],   # amber — pending
+    "Processing" => ["#fde8dc", "#a33500"],   # orange — in progress
+    "Confirmed"  => ["#d4f5e9", "#065f46"],   # teal-green — agreed
+    "Delivered"  => ["#dbeafe", "#1e40af"],   # blue — fallback for the Delivered status
+    "Delivery"   => ["#dbeafe", "#1e40af"],   # blue — fulfilled by vendor delivery
+    "Shipping"   => ["#cffafe", "#155e75"],   # cyan — fulfilled by shipping
+    "Invoiced"   => ["#ede9fe", "#5b21b6"],   # violet — billed
+    "Paid"       => ["#dcfce7", "#166534"],   # green — paid / settled
+    "Cancelled"  => ["#fce8e8", "#991b1b"],   # red — void
   }.freeze
 
-  def po_status_classes(status)
-    PO_STATUS_CLASSES[status] || "bg-[#e8e8e8] text-[#555]"
+  def po_status_style(key)
+    bg, text = PO_STATUS_COLORS[key] || PO_STATUS_COLORS["Draft"]
+    "background-color:#{bg};color:#{text}"
   end
 
-  # Buyer-facing label for a PO status (T05) — e.g. "Processing" → "Sent to Vendors".
+  # Buyer-facing label for a PO status (T05).
   def po_status_label(status)
     PurchaseOrder.label_for(status)
+  end
+
+  # Per-row / per-PO status label. Fulfillment POs show their actual method
+  # (Delivery / Shipping); "In Review" shows the short "In-Review". Every other
+  # status falls back to the standard label. The index tab/filter still shows the
+  # fuller labels ("Fulfillment", "In Review by Cureate").
+  def po_line_status_label(po)
+    case po.status
+    when "Delivered" then po.fulfillment_method.presence || "Delivery"
+    when "In Review" then "In-Review"
+    end
   end
 
   # Returns the certifications minus the trailing " Business" suffix.

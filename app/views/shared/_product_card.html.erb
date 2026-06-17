@@ -26,7 +26,33 @@
     <div class="flex-1 flex flex-col overflow-hidden p-[10px] gap-[8px]">
       <p class="font-bold text-[#377b82] text-[14px]"><%= vendor.name %></p>
       <p class="font-bold leading-tight text-[#444955] text-[12px] line-clamp-2 min-h-[1.5rem]"><%= product.name %></p>
-      <p class="text-[#777] text-[13px] mt-auto">$<%= sprintf("%.2f", product.wholesale_unit_price) %> / unit</p>
+
+      <%# Minimum orderable quantity + the price of that orderable unit, mirroring the
+          product detail page. Case-ordered products (case_minimum set) show cases and the
+          case price; unit-ordered products show units and the unit price. %>
+      <div class="mt-auto flex flex-col gap-[2px]">
+        <% label = product.unit_label || "unit" %>
+        <% item_label = product.item_label || "unit" %>
+        <% if product.case_minimum %>
+          <% cm = product.case_minimum %>
+          <p class="text-[13px]">
+            <span class="font-bold text-[#444955]"><%= cm %> <%= cm == 1 ? "Case" : "Cases" %></span>
+            <% if product.wholesale_case_price %>
+              <span class="text-[#777]">· $<%= sprintf("%.2f", product.wholesale_case_price) %> / Case</span>
+            <% end %>
+          </p>
+          <% if product.wholesale_case_price && item_label != "case" && product.units_per_case.to_i > 0 %>
+            <% item_price = (product.units_per_item || 1).to_f / product.units_per_case * product.wholesale_case_price %>
+            <p class="text-[#999] text-[12px]">$<%= sprintf("%.2f", item_price) %> / <%= item_label %></p>
+          <% end %>
+        <% else %>
+          <% um = product.unit_minimum || 1 %>
+          <p class="text-[13px]">
+            <span class="font-bold text-[#444955]"><%= um %> <%= um == 1 ? "Unit" : "Units" %></span>
+            <span class="text-[#777]">· $<%= sprintf("%.2f", product.wholesale_unit_price) %> / <%= label %></span>
+          </p>
+        <% end %>
+      </div>
     </div>
   </div>
 <% end %>

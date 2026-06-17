@@ -58,7 +58,9 @@
             <h2 class="text-[18px] font-normal text-[#1f1f1f] mb-1">Purchase Order Details</h2>
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-[12px] text-[#777]"><%= @po.id %></span>
-              <%= render "shared/po_status_badge", status: @po.status %>
+              <%# Detail + table rows show the specific label (Delivery/Shipping, In-Review);
+                  the index tab/filter shows the fuller "Fulfillment" / "In Review by Cureate". %>
+              <%= render "shared/po_status_badge", status: @po.status, label: po_line_status_label(@po) %>
             </div>
             <% unless @po.draft? %>
               <p class="text-[11px] text-[#a1a4aa] mt-1.5 flex items-center gap-1">

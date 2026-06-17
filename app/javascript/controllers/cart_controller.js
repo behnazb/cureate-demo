@@ -98,6 +98,19 @@ export default class extends Controller {
     if (quantity > 0 && isNew) this.#emit("cart:item-added", { vendorId, productId })
   }
 
+  // Per-line delivery scheduling (set on the review screen). frequency is
+  // "single" | "weekly" | "biweekly"; deliverySpec is an ISO date (single) or a
+  // weekday abbrev like "Mon" (weekly/biweekly). Persists with the cart item.
+  setItemDelivery(vendorId, productId, frequency, deliverySpec) {
+    const draft = this.#activeDraft(); if (!draft) return
+    draft.items = draft.items.map(i =>
+      (i.vendorId === vendorId && i.productId === productId)
+        ? { ...i, frequency, deliverySpec }
+        : i)
+    this.#persist()
+    this.#emit("cart:changed")
+  }
+
   removeItem(vendorId, productId) {
     const draft = this.#activeDraft(); if (!draft) return
     draft.items = draft.items.filter(i => !(i.vendorId === vendorId && i.productId === productId))

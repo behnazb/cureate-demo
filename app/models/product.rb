@@ -10,7 +10,8 @@
 class Product
   ATTRS = %i[
     id name upc size wholesale_unit_price msrp case_pack units_per_case
-    wholesale_case_price case_minimum storage allergens dietary cuisine
+    wholesale_case_price case_minimum unit_minimum unit_label units_per_item item_label
+    storage allergens dietary cuisine
     category image breadcrumb is_shipping_fee vendor
   ].freeze
   attr_accessor(*ATTRS)

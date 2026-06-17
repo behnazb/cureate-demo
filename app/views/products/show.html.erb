@@ -4,9 +4,13 @@
 <div data-controller="product-detail"
      data-product-detail-vendor-id-value="<%= @vendor.id %>"
      data-product-detail-product-id-value="<%= @product.id %>"
-     data-product-detail-units-per-case-value="<%= rules[:units_per_case] || 1 %>"
+     data-product-detail-units-per-case-value="<%= @product.units_per_case || rules[:units_per_case] || 1 %>"
+     data-product-detail-units-per-item-value="<%= @product.units_per_item || 1 %>"
      data-product-detail-min-units-value="<%= rules[:min_units] || 1 %>"
+     data-product-detail-min-amount-value="<%= rules[:min_amount] || 0 %>"
      data-product-detail-wholesale-unit-price-value="<%= @product.wholesale_unit_price %>"
+     data-product-detail-wholesale-case-price-value="<%= @product.wholesale_case_price || 0 %>"
+     data-product-detail-item-label-value="<%= @product.item_label || 'unit' %>"
      class="flex h-screen overflow-hidden font-['Lato']">
 
   <%= render "shared/sidebar" %>
@@ -66,7 +70,7 @@
               { label: "Size",                  value: @product.size },
               { label: "Wholesale Unit Price",  value: "$#{format('%.2f', @product.wholesale_unit_price)}" },
               { label: "MSRP",                  value: @product.msrp ? "$#{format('%.2f', @product.msrp)}" : "—" },
-              { label: "Case Pack",             value: @product.case_pack&.to_s || "—" },
+              { label: "Units by Case",         value: @product.units_per_case&.to_s || "—" },
               { label: "Wholesale Case Price",  value: @product.wholesale_case_price ? "$#{format('%.2f', @product.wholesale_case_price)}" : "—" },
               { label: "Case Minimum",          value: @product.case_minimum&.to_s || "—" },
             ]
@@ -120,9 +124,14 @@
               <circle cx="10" cy="6.3" r="0.65" fill="currentColor"/>
             </svg>
             <div>
-              <p class="font-bold mb-0.5 text-[#444955] text-[16px]">
-                Minimum order: <%= rules[:min_cases] %> cases (<%= rules[:min_units] %> units) across any <%= @vendor.name %> flavors
-              </p>
+              <% if rules[:min_amount] %>
+                <p class="font-bold mb-0.5 text-[#444955] text-[16px]">Minimum order: $<%= rules[:min_amount] %></p>
+              <% else %>
+                <% min_cases = rules[:min_cases] || 1 %>
+                <p class="font-bold mb-0.5 text-[#444955] text-[16px]">
+                  Minimum order: <%= min_cases %> <%= min_cases == 1 ? "case" : "cases" %> (<%= rules[:min_units] %> units)<%= rules[:mix_and_match] ? " — flavors interchangeable" : "" %>
+                </p>
+              <% end %>
               <p class="text-[#777] text-[14px]"><%= rules[:mix_and_match_note] %></p>
             </div>
           </div>
@@ -137,15 +146,10 @@
               <button data-action="click->product-detail#increment"
                       class="w-9 h-9 flex items-center justify-center text-lg font-bold transition-colors hover:bg-[#f7f5ef] text-[#444955] no-min-h">+</button>
             </div>
-            <div class="flex gap-2 ml-1">
-              <button data-action="click->product-detail#setUnits" data-product-detail-target="unitsButton"
-                      class="bg-[#035257] text-white rounded-full px-4 py-2 cursor-pointer transition-colors text-[14px] no-min-h">Units</button>
-              <button data-action="click->product-detail#setCases" data-product-detail-target="casesButton"
-                      class="border border-[#a1a4aa] text-[#444955] rounded-full px-4 py-2 cursor-pointer transition-colors text-[14px] no-min-h">Cases</button>
-            </div>
+            <span class="text-[#777] text-[14px] ml-1"><%= (@product.item_label || "unit") %>s</span>
             <div class="ml-auto text-right">
-              <p class="text-lg font-bold leading-tight text-[#1f1f1f]" data-product-detail-target="totalPrice">$<%= format("%.2f", @product.wholesale_unit_price) %></p>
-              <p class="text-[#777] text-[14px]" data-product-detail-target="totalUnits">1 unit × $<%= format("%.2f", @product.wholesale_unit_price) %></p>
+              <p class="text-lg font-bold leading-tight text-[#1f1f1f]" data-product-detail-target="totalPrice">$0.00</p>
+              <p class="text-[#777] text-[14px]" data-product-detail-target="totalUnits"></p>
             </div>
           </div>
 

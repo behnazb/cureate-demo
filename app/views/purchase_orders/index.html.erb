@@ -122,7 +122,7 @@
             class: "block mx-4 mb-3 bg-white border border-[#e8e8e8] rounded-xl p-4 active:bg-[#f7f5ef] transition-colors no-min-h" do %>
           <div class="flex items-start justify-between mb-2">
             <span class="text-[14px] font-bold text-[#28ba93]"><%= po.id %></span>
-            <%= render "shared/po_status_badge", status: po.status %>
+            <%= render "shared/po_status_badge", status: po.status, label: po_line_status_label(po) %>
           </div>
           <div class="flex items-center justify-between">
             <div>
@@ -169,7 +169,7 @@
               </td>
               <td class="px-3 py-4 text-[13px] text-[#777]"><%= format_delivery_date(po.delivery_date) %></td>
               <td class="px-3 py-4 text-[13px] font-bold text-[#1f1f1f]">$<%= format("%.2f", po.total) %></td>
-              <td class="px-3 py-4"><%= render "shared/po_status_badge", status: po.status %></td>
+              <td class="px-3 py-4"><%= render "shared/po_status_badge", status: po.status, label: po_line_status_label(po) %></td>
               <td class="px-3 py-4 text-right">
                 <%= render "shared/po_dropdown_menu", items: [
                   { label: "Add more to PO",   icon: "add",       action: "po:add-more",   detail: { id: po.id } },

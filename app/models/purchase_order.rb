@@ -10,11 +10,12 @@ class PurchaseOrder
   STATUSES = %w[Draft In\ Review Processing Confirmed Delivered Invoiced Paid Cancelled].freeze
 
   # Display labels (T05). The underlying status enum above is unchanged — only the
-  # text shown to buyers differs: "Processing" reads as "Sent to Vendors", and
-  # "In Review" is clarified to "In Review by Cureate".
+  # text shown to buyers differs: "In Review" is clarified to "In-Review by Cureate".
   STATUS_LABELS = {
-    "In Review"  => "In Review by Cureate",
-    "Processing" => "Sent to Vendors",
+    "In Review"  => "In-Review by Cureate",
+    # "Delivered" is now shown as "Fulfillment" — orders can be fulfilled by the
+    # vendor's own delivery or by shipping. Underlying enum stays "Delivered".
+    "Delivered"  => "Fulfillment",
   }.freeze
 
   def self.label_for(status)
@@ -23,7 +24,7 @@ class PurchaseOrder
 
   ATTRS = %i[
     id status total cureator_name created_at delivery_date delivery_date_short
-    date_range line_items
+    date_range line_items fulfillment_method
   ].freeze
   attr_accessor(*ATTRS)
 
@@ -45,10 +46,10 @@ class PurchaseOrder
   # `value` (URL param) and `statuses` (underlying enum) are unchanged.
   TAB_DEFINITIONS = [
     { label: "Draft",                value: "draft",      statuses: ["Draft"] },
-    { label: "In Review by Cureate", value: "in-review",  statuses: ["In Review"] },
-    { label: "Sent to Vendors",      value: "processing", statuses: ["Processing"] },
+    { label: "In-Review by Cureate", value: "in-review",  statuses: ["In Review"] },
+    { label: "Processing",           value: "processing", statuses: ["Processing"] },
     { label: "Confirmed",            value: "confirmed",  statuses: ["Confirmed"] },
-    { label: "Delivered",            value: "delivered",  statuses: ["Delivered"] },
+    { label: "Fulfillment",          value: "delivered",  statuses: ["Delivered"] },
     { label: "Paid",                 value: "paid",       statuses: ["Paid"] },
     { label: "Invoiced",             value: "invoiced",   statuses: ["Invoiced"],  overflow: true },
     { label: "Cancelled",            value: "cancelled",  statuses: ["Cancelled"], overflow: true },

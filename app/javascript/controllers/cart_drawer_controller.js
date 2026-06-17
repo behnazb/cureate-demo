@@ -11,8 +11,8 @@ export default class extends Controller {
   static targets = [
     "panel", "backdrop",
     "cartView", "confirmationView", "successView",
-    "deliveryBanner", "weekLabel", "poMeta", "repeatLabel",
-    "deliveryEditor", "weekSelect", "repeatSelect",
+    "deliveryBanner", "weekLabel", "poMeta",
+    "deliveryEditor", "weekSelect",
     "emptyState", "vendorGroups", "subtotalBlock", "subtotal", "progressBar", "minStatus",
     "savedIndicator", "saveButton", "continueButton",
     "confirmationPOId", "confirmationBody",
@@ -69,6 +69,25 @@ export default class extends Controller {
   }
   setRepeat(event) {
     findCartController(this.application)?.setRepeatMode(event.target.value)
+  }
+
+  // ─── Per-line delivery (review screen) ───────────────────────────────────────
+  // Changing frequency resets the schedule to the vendor's preferred default for the
+  // new frequency type (a date for "single", a weekday for weekly/biweekly).
+  setLineFrequency(event) {
+    const { vendorId, productId } = event.target.dataset
+    const freq = event.target.value
+    const cart = findCartController(this.application); if (!cart) return
+    const vendor = this.vendorsValue.find(v => v.id === vendorId) || {}
+    const pref = vendor.preferred_delivery_day || "Mon"
+    const spec = freq === "single" ? this.#weekDates(cart)[pref] : pref
+    cart.setItemDelivery(vendorId, productId, freq, spec)
+    this.#renderConfirmation()
+  }
+  setLineSchedule(event) {
+    const { vendorId, productId, freq } = event.target.dataset
+    findCartController(this.application)?.setItemDelivery(vendorId, productId, freq, event.target.value)
+    this.#renderConfirmation()
   }
 
   // ─── Bottom CTAs ─────────────────────────────────────────────────────────────
@@ -178,12 +197,7 @@ export default class extends Controller {
     } else {
       this.poMetaTarget.classList.add("hidden")
     }
-    if (cart.repeatMode !== "none") {
-      this.repeatLabelTarget.textContent = "· " + this.#labelForRepeat(cart.repeatMode)
-      this.repeatLabelTarget.classList.remove("hidden")
-    } else {
-      this.repeatLabelTarget.classList.add("hidden")
-    }
+    // Delivery frequency now lives per-product on the review screen (screen 2).
 
     // Vendor groups
     const grouped = this.#groupItemsByVendor(items)
@@ -213,7 +227,7 @@ export default class extends Controller {
       this.continueButtonTarget.style.color = "#a1a4aa"
     }
     const overall = grouped.length === 0 ? 0 :
-      grouped.reduce((s, g) => s + (g.minRequired > 0 ? Math.min((g.totalUnits / g.minRequired) * 100, 100) : 100), 0) / grouped.length
+      grouped.reduce((s, g) => s + g.progressPct, 0) / grouped.length
     this.progressBarTarget.style.width = `${overall}%`
 
     this.minStatusTarget.innerHTML = allMinsMet
@@ -238,7 +252,6 @@ export default class extends Controller {
       const label = this.#formatWeekOption(iso)
       return `<option value="${iso}" ${iso === cart.selectedDeliveryWeek ? "selected" : ""}>${label}</option>`
     }).join("")
-    this.repeatSelectTarget.value = cart.repeatMode
   }
 
   #groupItemsByVendor(items) {
@@ -250,36 +263,97 @@ export default class extends Controller {
         const p = v.products.find(p => p.id === i.productId)
         return p ? { ...i, product: p } : null
       }).filter(Boolean)
-      const vendorTotal = products.reduce((s, i) => s + i.product.wholesale_unit_price * i.quantity, 0)
-      const totalUnits = products.reduce((s, i) =>
-        s + (i.unit === "cases" ? i.quantity * v.order_rules.units_per_case : i.quantity), 0)
+      // Each cart item represents one orderable "item" (a 2-pack, a case, or a unit). Convert
+      // to individual units via units_per_item, and price by prorating the case price so a full
+      // case lands exactly on the case price (e.g. 3 two-packs = $68.20, not 3 × $22.68).
+      const lineUnitsOf = (i) => {
+        const upc = i.product.units_per_case || v.order_rules.units_per_case || 1
+        const perItem = i.product.units_per_item || 1
+        return i.unit === "cases" ? i.quantity * upc : i.quantity * perItem
+      }
+      const lineTotalOf = (i) => {
+        const upc = i.product.units_per_case || v.order_rules.units_per_case || 1
+        const lu = lineUnitsOf(i)
+        return (i.product.wholesale_case_price != null && upc)
+          ? (lu / upc) * i.product.wholesale_case_price
+          : i.product.wholesale_unit_price * lu
+      }
+      const vendorTotal = products.reduce((s, i) => s + lineTotalOf(i), 0)
+      const totalUnits  = products.reduce((s, i) => s + lineUnitsOf(i), 0)
       const minRequired = v.order_rules.min_units
-      const minMet = totalUnits >= minRequired
-      out.push({ vendor: v, products, vendorTotal, totalUnits, minRequired, minMet })
+      const minAmount = v.order_rules.min_amount
+
+      // A vendor with a dollar minimum is gated on the running subtotal; otherwise on units.
+      let minType, minMet, progressPct
+      if (minAmount != null && minAmount > 0) {
+        minType = "amount"
+        minMet = vendorTotal >= minAmount
+        progressPct = Math.min((vendorTotal / minAmount) * 100, 100)
+      } else {
+        minType = "units"
+        minMet = totalUnits >= minRequired
+        progressPct = minRequired > 0 ? Math.min((totalUnits / minRequired) * 100, 100) : 100
+      }
+
+      out.push({ vendor: v, products, vendorTotal, totalUnits, minRequired, minAmount, minType, minMet, progressPct })
     })
     return out
   }
 
+  // Price of one orderable item (2-pack, case, unit), derived from the case price prorated by
+  // units so a full case == the case price. A sub-unit breakdown (e.g. $/pack) is shown only
+  // when the sub-unit is meaningful — not for raw individual units.
+  #linePrice(p) {
+    const itemLabel = p.item_label || "unit"
+    const upc = p.units_per_case || 0
+    if (p.wholesale_case_price != null && upc) {
+      const perItem = p.units_per_item || 1
+      const itemPrice = (perItem / upc) * p.wholesale_case_price
+      const label = p.unit_label || "unit"
+      const breakdown = label !== "unit"
+        ? ` <span class="text-[#888780]">($${p.wholesale_unit_price.toFixed(2)}/${label})</span>`
+        : ""
+      return `<span class="font-bold">$${itemPrice.toFixed(2)} / ${itemLabel}</span>${breakdown}`
+    }
+    return `$${p.wholesale_unit_price.toFixed(2)} / ${p.unit_label || "unit"}`
+  }
+
   #vendorCardHTML(g) {
-    const remaining = Math.max(0, g.minRequired - g.totalUnits)
-    const progress = g.minRequired > 0 ? Math.min((g.totalUnits / g.minRequired) * 100, 100) : 100
+    const progress = g.progressPct
+    const itemLabel = (g.products[0] && g.products[0].product.item_label) || "unit"
+    const itemUnits = (g.products[0] && g.products[0].product.units_per_item) || 1
+
+    let unmetLabel, remainingItems = 0
+    if (g.minType === "amount") {
+      // Dollar-based MOQ: remaining and target are both expressed in dollars.
+      const remaining = Math.max(0, g.minAmount - g.vendorTotal)
+      const minLabel = g.minAmount % 1 === 0 ? `$${g.minAmount}` : `$${g.minAmount.toFixed(2)}`
+      unmetLabel = `Add $${remaining.toFixed(2)} more to meet ${minLabel} MOQ`
+    } else {
+      // Item-based MOQ: count orderable items (2-packs, cases) toward a 1-Case minimum.
+      const minItems = Math.max(1, Math.round(g.minRequired / itemUnits))
+      const currentItems = g.totalUnits / itemUnits
+      remainingItems = Math.max(0, Math.ceil(minItems - currentItems))
+      const upcVendor = (g.vendor.order_rules && g.vendor.order_rules.units_per_case) || 1
+      const minCases = Math.max(1, Math.round(g.minRequired / upcVendor))
+      unmetLabel = `Add ${remainingItems} more ${itemLabel}${remainingItems === 1 ? "" : "s"} to meet ${minCases} Case${minCases === 1 ? "" : "s"} MOQ`
+    }
     const status = g.minMet
       ? `<div class="flex items-center gap-1.5 shrink-0">
            <svg viewBox="0 0 11 9" fill="none" class="w-[11px] h-[9px]"><path d="M1 4.5L4 7.5L10 1" stroke="#035257" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
            <span class="font-bold text-[#035257] text-[11px]">Minimum order quantity has been met</span>
          </div>`
-      : `<span class="font-bold shrink-0 text-[#035257] text-[11px]">Add ${remaining} more item${remaining === 1 ? "" : "s"} to meet min</span>`
+      : `<span class="font-bold shrink-0 text-[#035257] text-[11px]">${unmetLabel}</span>`
 
     const rows = g.products.map(i => {
-      // Per-line MOQ signal (T09) — text only, additive to the vendor-level bar.
-      // Per-product minimum = case_minimum × units_per_case (seed-data scaffold until
-      // Michael's MOQ service provides per-product MOQ data).
-      const upc = i.product.units_per_case || 1
-      const lineUnits = i.unit === "cases" ? i.quantity * upc : i.quantity
-      const lineRemaining = Math.max(0, (i.product.case_minimum || 1) * upc - lineUnits)
-      const moqTag = lineRemaining === 0
-        ? `<span class="text-[11px] font-bold text-[#28ba93]">Min met</span>`
-        : `<span class="text-[11px] text-[#888780]">Add ${lineRemaining} more</span>`
+      // Per-line signal mirrors the vendor MOQ — 2Betties/Ethiopian flavors are interchangeable
+      // toward the 1-case minimum, so each line shows the same remaining-to-meet count.
+      let moqTag = ""
+      if (g.minType === "units") {
+        moqTag = g.minMet
+          ? `<span class="text-[11px] font-bold text-[#28ba93]">Min met</span>`
+          : `<span class="text-[11px] text-[#888780]">Add ${remainingItems} more</span>`
+      }
       return `
       <div class="flex items-center justify-between px-4 py-3 bg-[#fbf9f6]" style="margin-bottom: 1px">
         <div class="flex items-center gap-2" style="width: 65%">
@@ -289,7 +363,7 @@ export default class extends Controller {
           <div class="flex flex-col gap-1 min-w-0">
             <span class="font-bold text-[#035257] text-[11px]">${g.vendor.name}</span>
             <span class="font-bold leading-tight text-[#444955] text-[11px]">${i.product.name}</span>
-            <span class="text-[#1f1f1f] text-[11px]">$${(i.product.wholesale_unit_price * i.quantity).toFixed(2)}</span>
+            <span class="text-[#1f1f1f] text-[11px]">${this.#linePrice(i.product)}</span>
             ${moqTag}
           </div>
         </div>
@@ -336,6 +410,7 @@ export default class extends Controller {
     const grouped = this.#groupItemsByVendor(cart.items)
     const total = grouped.reduce((s, g) => s + g.vendorTotal, 0)
     this.confirmationPOIdTarget.textContent = cart.selectedPOId
+    const dates = this.#weekDates(cart)
 
     const cards = grouped.map(g => `
       <div class="mx-4 bg-white rounded-[20px] overflow-hidden border border-[#e8e8e8]" style="box-shadow: 2px 2px 10px 0px rgba(156,153,153,0.25);">
@@ -347,22 +422,41 @@ export default class extends Controller {
             <span class="text-[14px] font-bold text-[#777]">${g.vendor.name}</span>
           </div>
         </div>
-        ${g.products.map(i => `
-          <div class="flex items-center justify-between p-4 bg-[#fbf9f6]" style="margin-bottom: 1px">
-            <div class="flex items-center gap-2 flex-1 min-w-0">
-              <div class="w-[65px] h-[60px] shrink-0 flex items-center justify-center bg-[#f7f5ef] rounded-md overflow-hidden">
-                <img src="${i.product.image}" alt="${i.product.name}" class="w-full h-full object-contain mix-blend-multiply p-1">
+        ${g.products.map(i => {
+          const days = (g.vendor.delivery_days && g.vendor.delivery_days.length) ? g.vendor.delivery_days : ["Mon", "Tue", "Wed", "Thu", "Fri"]
+          const pref = g.vendor.preferred_delivery_day || days[0]
+          const freq = i.frequency || "single"
+          const spec = i.deliverySpec || (freq === "single" ? dates[pref] : pref)
+          const freqOpts = [["single", "Single order"], ["weekly", "Weekly"], ["biweekly", "Bi-weekly"]]
+            .map(([v, l]) => `<option value="${v}" ${v === freq ? "selected" : ""}>${l}</option>`).join("")
+          const schedOpts = freq === "single"
+            ? days.map(d => dates[d] ? `<option value="${dates[d]}" ${dates[d] === spec ? "selected" : ""}>${this.#shortDate(dates[d])}</option>` : "").join("")
+            : days.map(d => `<option value="${d}" ${d === spec ? "selected" : ""}>${this.#dayName(d)}</option>`).join("")
+          const selCls = "text-[11px] border border-[#e8e8e8] rounded-md px-2 h-[26px] bg-white text-[#444955] outline-none cursor-pointer hover:border-[#28ba93] transition-colors"
+          return `
+          <div class="p-4 bg-[#fbf9f6]" style="margin-bottom: 1px">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <div class="w-[65px] h-[60px] shrink-0 flex items-center justify-center bg-[#f7f5ef] rounded-md overflow-hidden">
+                  <img src="${i.product.image}" alt="${i.product.name}" class="w-full h-full object-contain mix-blend-multiply p-1">
+                </div>
+                <div class="flex flex-col gap-1 min-w-0 flex-1">
+                  <span class="text-[11px] font-bold text-[#035257] truncate">${g.vendor.name}</span>
+                  <span class="text-[11px] font-bold text-[#444955] leading-tight truncate">${i.product.name}</span>
+                  <span class="text-[11px] text-[#363636]">${this.#linePrice(i.product)}</span>
+                </div>
               </div>
-              <div class="flex flex-col gap-1 min-w-0 flex-1">
-                <span class="text-[11px] font-bold text-[#035257] truncate">${g.vendor.name}</span>
-                <span class="text-[11px] font-bold text-[#444955] leading-tight truncate">${i.product.name}</span>
-                <span class="text-[11px] text-[#363636]">$${(i.product.wholesale_unit_price * i.quantity).toFixed(2)}</span>
+              <div class="shrink-0 ml-3 bg-[#f0f0f0] rounded-full h-[26px] px-4 flex items-center justify-center">
+                <span class="text-[11px] font-bold text-[#444955]">× ${i.quantity}</span>
               </div>
             </div>
-            <div class="shrink-0 ml-3 bg-[#f0f0f0] rounded-full h-[26px] px-4 flex items-center justify-center">
-              <span class="text-[11px] font-bold text-[#444955]">× ${i.quantity}</span>
+            <div class="flex flex-wrap items-center gap-2 mt-3 md:pl-[73px]">
+              <span class="text-[11px] text-[#777]">Deliver by</span>
+              <select data-action="change->cart-drawer#setLineFrequency" data-vendor-id="${g.vendor.id}" data-product-id="${i.product.id}" class="${selCls}">${freqOpts}</select>
+              <select data-action="change->cart-drawer#setLineSchedule" data-vendor-id="${g.vendor.id}" data-product-id="${i.product.id}" data-freq="${freq}" class="${selCls}">${schedOpts}</select>
             </div>
-          </div>`).join("")}
+          </div>`
+        }).join("")}
         <div class="flex items-center justify-between px-4 py-3">
           <span class="text-[14px] font-bold text-[#777]">Vendor Subtotal</span>
           <span class="text-[14px] font-bold text-[#777]">$${g.vendorTotal.toFixed(2)}</span>
@@ -420,6 +514,25 @@ export default class extends Controller {
     const wed = this.#parseISO(iso)
     const mon = new Date(wed); mon.setDate(wed.getDate() - 2)
     return mon.toLocaleDateString("en-US", { month: "long", day: "numeric" })
+  }
+  // Map each weekday in the active PO week (Mon-Sun) to its ISO date.
+  #weekDates(cart) {
+    const wed = this.#parseISO(cart.selectedDeliveryWeek)
+    const mon = new Date(wed); mon.setDate(wed.getDate() - 2)
+    const order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    const map = {}
+    order.forEach((d, idx) => {
+      const dt = new Date(mon); dt.setDate(mon.getDate() + idx)
+      const y = dt.getFullYear(), m = String(dt.getMonth() + 1).padStart(2, "0"), dd = String(dt.getDate()).padStart(2, "0")
+      map[d] = `${y}-${m}-${dd}`
+    })
+    return map
+  }
+  #shortDate(iso) {
+    return this.#parseISO(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+  }
+  #dayName(abbr) {
+    return ({ Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" })[abbr] || abbr
   }
   #formatWeekOption(iso) {
     const wed = this.#parseISO(iso)

@@ -1,4 +1,9 @@
-<%# Locals: status (underlying enum). Displays the buyer-facing label (T05). %>
-<span class="inline-flex items-center whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-bold <%= po_status_classes(status) %>">
-  <%= po_status_label(status) %>
+<%# Locals: status (underlying enum). Optional `label:` overrides the displayed text
+    (e.g. the fulfillment method on the PO detail page) while the color still keys off
+    the underlying status. %>
+<% badge_label = local_assigns.fetch(:label, nil) %>
+<%# Delivery / Shipping get their own pill color; everything else colors by status. %>
+<% color_key = %w[Delivery Shipping].include?(badge_label) ? badge_label : status %>
+<span class="inline-flex items-center whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-bold" style="<%= po_status_style(color_key) %>">
+  <%= badge_label.presence || po_status_label(status) %>
 </span>
