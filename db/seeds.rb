@@ -209,6 +209,11 @@ PurchaseOrder.all.concat([
     id: "006-STEPH-00001",
     date_range: { start: "03/15/2026", end: "03/21/2026" },
     status: "Delivered", total: 889.00, fulfillment_method: "Delivery",
+    # Per-vendor fulfillment: 2Betties ships (UPS + tracking); Ethiopian self-delivers.
+    fulfillment_by_vendor: {
+      "2betties"           => { method: "Shipping", carrier: "UPS", tracking: "1Z999AA10123456784" },
+      "ethiopian-delights" => { method: "Delivery" },
+    },
     cureator_name: "Cureate DMV", created_at: "2026-03-15",
     delivery_date: "2026-03-18", delivery_date_short: "Mar 18",
     line_items: [
@@ -235,5 +240,73 @@ PurchaseOrder.all.concat([
     cureator_name: "Cureate DMV", created_at: "2026-02-10",
     delivery_date: nil, delivery_date_short: nil,
     line_items: [],
+  ),
+
+  # ── Additional sample POs to populate the board across statuses ──────────────
+  PurchaseOrder.new(
+    id: "008-MARKET-00002",
+    date_range: { start: "05/01/2026", end: "05/13/2026" },
+    status: "Processing", total: 341.00,
+    cureator_name: "Cureate DMV", created_at: "2026-05-01",
+    delivery_date: "2026-05-13", delivery_date_short: "May 13",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16820", quantity: 5, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Next delivery: 05/13/2026"),
+    ],
+  ),
+  PurchaseOrder.new(
+    id: "009-CHARLES-00021",
+    date_range: { start: "05/04/2026", end: "05/20/2026" },
+    status: "Processing", total: 226.44,
+    cureator_name: "Cureate DMV", created_at: "2026-05-04",
+    delivery_date: "2026-05-20", delivery_date_short: "May 20",
+    line_items: [
+      POLineItem.new(vendor_id: "ethiopian-delights", product_id: "10616", quantity: 3, unit: "cases",
+                     unit_price: 75.48, delivery_schedule: "Next delivery: 05/20/2026"),
+    ],
+  ),
+  PurchaseOrder.new(
+    id: "010-BRENDA-00102",
+    date_range: { start: "05/11/2026", end: "05/27/2026" },
+    status: "Confirmed", total: 78.00,
+    cureator_name: "Cureate DMV", created_at: "2026-05-11",
+    delivery_date: "2026-05-27", delivery_date_short: "May 27",
+    line_items: [
+      POLineItem.new(vendor_id: "open-seas-coffee-roasters", product_id: "16523", quantity: 2, unit: "cases",
+                     unit_price: 39.00, delivery_schedule: "Next delivery: 05/27/2026"),
+    ],
+  ),
+  PurchaseOrder.new(
+    id: "011-MARKET-00003",
+    date_range: { start: "06/01/2026", end: "06/17/2026" },
+    status: "In Review", total: 204.60,
+    cureator_name: "Cureate DMV", created_at: "2026-06-01",
+    delivery_date: "2026-06-17", delivery_date_short: "Jun 17",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16820", quantity: 3, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Next delivery: 06/17/2026"),
+    ],
+  ),
+  PurchaseOrder.new(
+    id: "002-STEPH-00007",
+    date_range: { start: "02/02/2026", end: "02/18/2026" },
+    status: "Paid", total: 477.40,
+    cureator_name: "Cureate DMV", created_at: "2026-02-02",
+    delivery_date: "2026-02-18", delivery_date_short: "Feb 18",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16821", quantity: 7, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Delivered 02/18/2026"),
+    ],
+  ),
+  PurchaseOrder.new(
+    id: "001-CHARLES-00009",
+    date_range: { start: "01/14/2026", end: "01/28/2026" },
+    status: "Invoiced", total: 377.40,
+    cureator_name: "Cureate DMV", created_at: "2026-01-14",
+    delivery_date: "2026-01-28", delivery_date_short: "Jan 28",
+    line_items: [
+      POLineItem.new(vendor_id: "ethiopian-delights", product_id: "10617", quantity: 5, unit: "cases",
+                     unit_price: 75.48, delivery_schedule: "Delivered 01/28/2026"),
+    ],
   ),
 ])

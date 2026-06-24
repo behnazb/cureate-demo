@@ -58,9 +58,11 @@
             <h2 class="text-[18px] font-normal text-[#1f1f1f] mb-1">Purchase Order Details</h2>
             <div class="flex items-center gap-2 flex-wrap">
               <span class="text-[12px] text-[#777]"><%= @po.id %></span>
-              <%# Detail + table rows show the specific label (Delivery/Shipping, In-Review);
-                  the index tab/filter shows the fuller "Fulfillment" / "In Review by Cureate". %>
-              <%= render "shared/po_status_badge", status: @po.status, label: po_line_status_label(@po) %>
+              <%# Fulfillment (Delivery/Shipping) is shown per-vendor below, so the header
+                  pill is hidden for fulfillment POs; other statuses still show here. %>
+              <% unless @po.status == "Delivered" %>
+                <%= render "shared/po_status_badge", status: @po.status, label: po_line_status_label(@po) %>
+              <% end %>
             </div>
             <% unless @po.draft? %>
               <p class="text-[11px] text-[#a1a4aa] mt-1.5 flex items-center gap-1">
@@ -124,21 +126,17 @@
               </div>
               <div>
                 <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-1">Vendors on this PO</p>
-                <div class="flex flex-col gap-0.5">
-                  <% @items_by_vendor.each do |g| %>
-                    <p class="text-[13px] font-bold text-[#1f1f1f]"><%= g[:vendor].name %></p>
-                  <% end %>
-                  <% if @items_by_vendor.empty? %><p class="text-[13px] text-[#777]">—</p><% end %>
-                </div>
+                <% count = @items_by_vendor.size %>
+                <p class="text-[13px] font-bold text-[#1f1f1f]"><%= count %> <%= count == 1 ? "vendor" : "vendors" %></p>
               </div>
             </div>
 
             <div class="h-px bg-[#e8e8e8] mb-4"></div>
 
             <div>
-              <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-2">Delivery Date</p>
+              <p class="text-[10px] font-bold text-[#777] uppercase tracking-wide mb-2">Delivery Week</p>
               <p class="text-[14px] font-bold text-[#1f1f1f]">
-                <%= @po.delivery_date ? format_delivery_full(@po.delivery_date) : "—" %>
+                <%= delivery_week_label(@po.delivery_date) %>
               </p>
             </div>
           </div>
@@ -148,8 +146,8 @@
       <%# Vendor line item cards %>
       <% @items_by_vendor.each do |group| %>
         <% vendor = group[:vendor] %>
-        <div class="<%= card_class %> overflow-hidden mb-4">
-          <div class="flex items-center justify-between px-5 py-4 border-b border-[#f0f0f0]">
+        <div class="<%= card_class %> p-5 mb-4">
+          <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-3">
               <div class="w-[50px] h-[50px] rounded-full bg-[#f7f5ef] flex items-center justify-center overflow-hidden border border-[#e8e8e8] shrink-0">
                 <img src="<%= vendor.logo %>" alt="<%= vendor.name %>" class="w-full h-full object-contain p-1">
@@ -169,54 +167,80 @@
             ] %>
           </div>
 
-          <%# Column headers (desktop) %>
-          <div class="hidden md:grid grid-cols-[2.5fr_1fr_1fr_1fr_1fr] gap-0 px-5 py-2 bg-[#fafafa] border-b border-[#e8e8e8]">
-            <% ["Product", "Quantity", "Unit Price", "Delivery Fee", "Extended Cost"].each do |h| %>
-              <p class="text-[11px] font-bold text-[#777] uppercase tracking-wide"><%= h %></p>
-            <% end %>
-          </div>
-
-          <% group[:items].each do |item| %>
-            <% next unless item.product %>
-            <div class="border-b border-[#f0f0f0] last:border-0">
-              <div class="hidden md:grid grid-cols-[2.5fr_1fr_1fr_1fr_1fr] gap-0 px-5 py-4 bg-[#fbf9f6] items-start">
-                <div>
-                  <p class="text-[13px] font-bold text-[#444955]"><%= item.product.name %></p>
-                  <p class="text-[11px] text-[#777] mt-0.5">
-                    ID #<%= item.product.id %><%= " · UPC: #{item.product.upc}" if item.product.upc %>
-                  </p>
-                </div>
-                <p class="text-[13px] text-[#444955] pt-0.5"><%= item.quantity %> <%= item.unit %></p>
-                <p class="text-[13px] text-[#444955] pt-0.5">$<%= format("%.2f", item.unit_price) %></p>
-                <p class="text-[13px] text-[#777] pt-0.5"><%= item.delivery_fee ? "$#{format('%.2f', item.delivery_fee)}" : "—" %></p>
-                <p class="text-[13px] font-bold text-[#1f1f1f] pt-0.5">$<%= format("%.2f", item.extended_cost) %></p>
+          <%# Vendor-level fulfillment summary, shown above the line items. Aligned to the
+              product columns; labels row, then a middle-aligned values row. %>
+          <% f = group[:fulfillment] %>
+          <% method = f && (f[:method] || "Delivery") %>
+          <% shipping = (method == "Shipping") %>
+          <% sched = group[:items].map { |i| i.delivery_schedule }.compact.first %>
+          <% if f || sched %>
+            <% lbl = "text-[11px] font-bold text-[#777] uppercase tracking-wide" %>
+            <% val = "text-[12px] text-[#444955]" %>
+            <div class="hidden md:block bg-[#fafafa] rounded-xl p-4 mb-4">
+              <div class="grid grid-cols-[2.5fr_1fr_1fr_1fr_1fr] gap-0 mb-3">
+                <p class="<%= lbl %>"><%= "Delivery Schedule" if sched %></p>
+                <p class="<%= lbl %>"><%= "Delivery Status" if f %></p>
+                <p class="<%= lbl %>"><%= "Carrier" if shipping %></p>
+                <p class="<%= lbl %>"><%= "Tracking" if shipping %></p>
+                <p></p>
               </div>
-              <div class="md:hidden px-4 py-3 bg-[#fbf9f6]">
-                <p class="text-[13px] font-bold text-[#444955] mb-1"><%= item.product.name %></p>
-                <p class="text-[11px] text-[#777] mb-2"><%= item.quantity %> <%= item.unit %> · $<%= format("%.2f", item.unit_price) %>/unit</p>
-                <div class="flex items-center justify-between">
-                  <p class="text-[11px] text-[#777]">Extended Cost</p>
-                  <p class="text-[13px] font-bold text-[#1f1f1f]">$<%= format("%.2f", item.extended_cost) %></p>
-                </div>
+              <div class="grid grid-cols-[2.5fr_1fr_1fr_1fr_1fr] gap-0 items-center">
+                <p class="<%= val %>"><%= sched %></p>
+                <div><% if f %><span class="inline-flex items-center whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-bold" style="<%= po_status_style(method) %>"><%= method %></span><% end %></div>
+                <p class="<%= val %>"><%= f[:carrier] if shipping %></p>
+                <p class="<%= val %> font-mono"><%= f[:tracking] if shipping %></p>
+                <p></p>
               </div>
-              <% if item.delivery_schedule || item.order_note %>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 px-4 md:px-5 py-3 bg-[#fafafa] border-t border-[#f0f0f0]">
-                  <% if item.delivery_schedule %>
-                    <div>
-                      <p class="text-[11px] font-bold text-[#777] uppercase tracking-wide mb-1">Delivery Schedule</p>
-                      <p class="text-[12px] text-[#444955]"><%= item.delivery_schedule %></p>
-                    </div>
-                  <% end %>
-                  <% if item.order_note %>
-                    <div>
-                      <p class="text-[11px] font-bold text-[#777] uppercase tracking-wide mb-1">Order Note</p>
-                      <p class="text-[12px] text-[#444955] italic">"<%= item.order_note %>"</p>
-                    </div>
-                  <% end %>
-                </div>
-              <% end %>
+            </div>
+            <div class="md:hidden bg-[#fafafa] rounded-xl p-4 mb-4 flex flex-col gap-3">
+              <% if sched %><div><p class="<%= lbl %> mb-1">Delivery Schedule</p><p class="<%= val %>"><%= sched %></p></div><% end %>
+              <% if f %><div><p class="<%= lbl %> mb-1">Delivery Status</p><span class="inline-flex items-center whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-bold" style="<%= po_status_style(method) %>"><%= method %></span></div><% end %>
+              <% if shipping && f[:carrier].present? %><div><p class="<%= lbl %> mb-1">Carrier</p><p class="<%= val %>"><%= f[:carrier] %></p></div><% end %>
+              <% if shipping && f[:tracking].present? %><div><p class="<%= lbl %> mb-1">Tracking</p><p class="<%= val %> font-mono"><%= f[:tracking] %></p></div><% end %>
             </div>
           <% end %>
+
+          <%# Product table — bordered box, inset by the card's p-5 padding (matches the top card) %>
+          <div class="border border-[#e8e8e8] rounded-xl overflow-hidden">
+            <%# Column headers (desktop) %>
+            <div class="hidden md:grid grid-cols-[2.5fr_1fr_1fr_1fr_1fr] gap-0 px-4 py-2.5 bg-[#fafafa] border-b border-[#e8e8e8]">
+              <% ["Product", "Quantity", "Unit Price", "Delivery Fee", "Extended Cost"].each do |h| %>
+                <p class="text-[11px] font-bold text-[#777] uppercase tracking-wide"><%= h %></p>
+              <% end %>
+            </div>
+
+            <% group[:items].each do |item| %>
+              <% next unless item.product %>
+              <div class="border-t border-[#f0f0f0] first:border-0">
+                <div class="hidden md:grid grid-cols-[2.5fr_1fr_1fr_1fr_1fr] gap-0 px-4 py-3.5 items-start">
+                  <div class="pr-4">
+                    <p class="text-[13px] font-bold text-[#444955]"><%= item.product.name %></p>
+                    <p class="text-[11px] text-[#999] mt-0.5">
+                      ID #<%= item.product.id %><%= " · UPC: #{item.product.upc}" if item.product.upc %>
+                    </p>
+                    <% if item.order_note.present? %>
+                      <p class="text-[11px] text-[#777] italic mt-1.5">&ldquo;<%= item.order_note %>&rdquo;</p>
+                    <% end %>
+                  </div>
+                  <p class="text-[13px] text-[#444955] pt-0.5"><%= item.quantity %> <%= item.unit %></p>
+                  <p class="text-[13px] text-[#444955] pt-0.5">$<%= format("%.2f", item.unit_price) %></p>
+                  <p class="text-[13px] text-[#777] pt-0.5"><%= item.delivery_fee ? "$#{format('%.2f', item.delivery_fee)}" : "—" %></p>
+                  <p class="text-[13px] font-bold text-[#1f1f1f] pt-0.5">$<%= format("%.2f", item.extended_cost) %></p>
+                </div>
+                <div class="md:hidden px-4 py-3.5">
+                  <p class="text-[13px] font-bold text-[#444955] mb-1"><%= item.product.name %></p>
+                  <p class="text-[11px] text-[#999] mb-1"><%= item.quantity %> <%= item.unit %> · $<%= format("%.2f", item.unit_price) %>/unit</p>
+                  <% if item.order_note.present? %>
+                    <p class="text-[11px] text-[#777] italic mb-2">&ldquo;<%= item.order_note %>&rdquo;</p>
+                  <% end %>
+                  <div class="flex items-center justify-between">
+                    <p class="text-[11px] text-[#777]">Extended Cost</p>
+                    <p class="text-[13px] font-bold text-[#1f1f1f]">$<%= format("%.2f", item.extended_cost) %></p>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
         </div>
       <% end %>
 

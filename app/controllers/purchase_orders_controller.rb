@@ -4,30 +4,37 @@ class PurchaseOrdersController < ApplicationController
 
   def index
     @search = params[:q].to_s
+    @view = %w[table board].include?(params[:view]) ? params[:view] : "table"
     raw_tab = params[:tab]
     @active_tab = PurchaseOrder.normalize_tab(raw_tab)
     @tab_config = PurchaseOrder.tab_for(@active_tab)
     @date_range = params[:range].presence || "30"
 
-    matching = PurchaseOrder.all.select { |po| @tab_config[:statuses].include?(po.status) }
+    all = PurchaseOrder.all
     if @search.present?
       q = @search.downcase
-      matching = matching.select { |po|
-        po.id.downcase.include?(q) || po.status.downcase.include?(q)
-      }
+      all = all.select { |po| po.id.downcase.include?(q) || po.status.downcase.include?(q) }
     end
-    @purchase_orders = matching
+
+    # Table view is filtered to the active status tab.
+    @purchase_orders = all.select { |po| @tab_config[:statuses].include?(po.status) }
+
+    # Board view: one column per status (same definitions that drive the tabs).
+    @board_columns = PurchaseOrder::TAB_DEFINITIONS.map { |t|
+      { label: t[:label], value: t[:value], pos: all.select { |po| t[:statuses].include?(po.status) } }
+    }
   end
 
   def show
     @po = PurchaseOrder.find(params[:id])
     return render_not_found unless @po
 
+    fulfillment = @po.fulfillment_by_vendor || {}
     @items_by_vendor = Vendor.all.map { |vendor|
       lines = @po.line_items.select { |li| li.vendor_id == vendor.id }
       next nil if lines.empty?
       subtotal = lines.sum { |li| li.extended_cost }
-      { vendor: vendor, items: lines, vendor_subtotal: subtotal }
+      { vendor: vendor, items: lines, vendor_subtotal: subtotal, fulfillment: fulfillment[vendor.id] }
     }.compact
 
     @subtotal       = @items_by_vendor.sum { |g| g[:vendor_subtotal] }

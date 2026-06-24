@@ -50,6 +50,19 @@ module ApplicationHelper
     "—"
   end
 
+  # Delivery week label, mirroring the cart drawer's selector exactly:
+  # "Week of Jun 29 — Wednesday, July 1". `iso` is a date within the delivery week
+  # (the cart stores that week's Wednesday); the Monday of the same week is derived.
+  def delivery_week_label(iso)
+    return "—" if iso.blank?
+    y, m, d = iso.split("-").map(&:to_i)
+    date = Date.new(y, m, d)
+    monday = date - ((date.wday + 6) % 7)
+    "Week of #{monday.strftime('%b %-d')} — #{date.strftime('%A, %B %-d')}"
+  rescue ArgumentError
+    "—"
+  end
+
   # Palette A status colors — soft tinted chip (bg) + dark same-family text, all at a
   # consistent saturation. Keyed by underlying status, plus the two fulfillment methods
   # (Delivery / Shipping) so they read as distinct pills. Applied via inline style so

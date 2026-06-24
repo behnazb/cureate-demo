@@ -24,7 +24,7 @@ class PurchaseOrder
 
   ATTRS = %i[
     id status total cureator_name created_at delivery_date delivery_date_short
-    date_range line_items fulfillment_method
+    date_range line_items fulfillment_method fulfillment_by_vendor
   ].freeze
   attr_accessor(*ATTRS)
 
