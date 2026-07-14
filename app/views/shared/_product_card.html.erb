@@ -2,7 +2,14 @@
   Locals: product, vendor (only id + name needed)
   Quantity badge / stepper handled inline (mirrors ProductCard.tsx layout).
 %>
-<% return if product.shipping_fee? || product.image.blank? %>
+<%#
+  A product with NO IMAGE is still a product. This used to read
+  `return if product.shipping_fee? || product.image.blank?`, which silently deleted any
+  un-photographed listing from the buyer's gallery. Most vendors will launch without
+  photos, so that would have hidden much of the marketplace. Only the shipping-fee line
+  item — which isn't a product at all — is skipped now.
+%>
+<% return if product.shipping_fee? %>
 <% qty_class_id     = "product-card-#{vendor.id}-#{product.id}" %>
 <%# Width + add-button placement are overridable so the same card works in the full
     gallery (200px) and the compact cart "Recently Purchased" strip. %>
@@ -14,8 +21,10 @@
     data: { vendor_id: vendor.id, product_id: product.id, controller: "product-card" } do %>
   <div class="flex flex-col rounded-lg bg-white shadow-sm cursor-pointer <%= frame_class %> border border-[#e8e8e8]"
        data-product-card-target="frame">
-    <div class="relative shrink-0 bg-[#f7f5ef] flex items-center justify-center p-2 overflow-hidden rounded-t-lg aspect-square md:aspect-auto md:h-[135px]">
-      <img src="<%= product.image %>" alt="<%= product.name %>" class="h-full w-full object-contain mix-blend-multiply">
+    <%# Full-bleed image plate — no inner padding, the cover image fills the thumbnail.
+        The beige bg only shows through for the no-photo placeholder. %>
+    <div class="relative shrink-0 bg-[#f7f5ef] flex items-center justify-center overflow-hidden rounded-t-lg aspect-square">
+      <%= render "shared/product_image", product: product, size: :card %>
 
       <%# Add button — replaced by stepper when qty > 0 (driven by add_to_cart controller) %>
       <div class="<%= add_button_class %>">

@@ -115,3 +115,21 @@ button, a { min-height: 44px; }
   -webkit-mask-size: contain;
           mask-size: contain;
 }
+
+/* ─── Brand plus ───────────────────────────────────────────────────────────────
+   Same mask technique as .icon-check, for public/icons/icon_add.svg. The asset ships
+   with fill="white", but a mask only reads the alpha channel, so the glyph takes the
+   element's currentColor — one asset, any size, any context (white on the green CTA,
+   dark on a ghost button). Usage: <span class="icon-add w-3 h-3">. */
+.icon-add {
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask-image: url("/icons/icon_add.svg");
+          mask-image: url("/icons/icon_add.svg");
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+}

@@ -36,10 +36,12 @@
 
       <%# Left: image + vendor summary %>
       <div>
-        <div class="w-full rounded-xl flex items-center justify-center p-8 bg-[#f7f5ef]" style="height: 400px">
-          <% if @product.image %>
-            <img src="<%= @product.image %>" alt="<%= @product.name %>" class="w-full h-full object-contain mix-blend-multiply">
-          <% end %>
+        <%# An un-photographed product still gets the full beige plate, so the PDP layout
+            holds. See shared/_product_image. %>
+        <%# Full-bleed hero — cover fills the plate; the beige only shows for the
+            no-photo placeholder (overflow-hidden keeps the rounded corners). %>
+        <div class="w-full rounded-xl overflow-hidden flex items-center justify-center bg-[#f7f5ef]" style="height: 400px">
+          <%= render "shared/product_image", product: @product, size: :hero, fit: :cover %>
         </div>
         <div class="mt-6 flex items-center gap-3">
           <img src="<%= @vendor.logo %>" alt="<%= @vendor.name %>"

@@ -105,4 +105,29 @@ module ApplicationHelper
   def short_cert(cert)
     cert.to_s.sub(/\s*Business\s*$/i, "")
   end
+
+  # ── Primary CTA ────────────────────────────────────────────────────────────
+  # ONE token for the green primary action, so the vendor's "Add New Product" and the
+  # buyer's "New Purchase Order" can't drift apart again. They were separately hand-rolled
+  # and had already diverged on padding and gap.
+  #
+  # Labels are Title Case, always.
+  def primary_cta_class(extra = nil)
+    [
+      "no-min-h inline-flex items-center gap-2 rounded-full px-4 h-[38px]",
+      "bg-[#28ba93] hover:bg-[#22a882] text-white text-[13px] font-bold",
+      "whitespace-nowrap transition-colors",
+      extra,
+    ].compact.join(" ")
+  end
+
+  # The brand plus, inlined with currentColor and cropped tight to the glyph so the
+  # button's padding is the padding you actually see. See public/icons/icon_add.svg.
+  def cta_plus_icon
+    tag.svg(width: 11, height: 11, viewBox: "1.8 1.8 16.4 16.4", fill: "none",
+            class: "shrink-0", "aria-hidden": "true") do
+      tag.path(d: "M10 3.2v13.6M3.2 10h13.6", stroke: "currentColor",
+               "stroke-width": "2.8", "stroke-linecap": "round")
+    end
+  end
 end

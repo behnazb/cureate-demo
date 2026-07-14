@@ -23,8 +23,11 @@
         <% end %>
       </div>
       <div class="flex items-center gap-3">
-        <%= link_to "+ New Purchase Order", products_path,
-            class: "no-min-h bg-[#28ba93] text-white text-[13px] font-bold rounded-full px-4 h-[38px] flex items-center gap-1 hover:bg-[#22a882] transition-colors" %>
+        <%# Shared primary-CTA token + the brand plus asset, not a typed "+". %>
+        <%= link_to products_path, class: primary_cta_class do %>
+          <%= cta_plus_icon %>
+          New Purchase Order
+        <% end %>
       </div>
     </div>
 
@@ -213,7 +216,6 @@
               <td class="px-3 py-4 text-right">
                 <%= render "shared/po_dropdown_menu", items: [
                   { label: "Add more to PO",   icon: "add",       action: "po:add-more",   detail: { id: po.id } },
-                  { label: "Duplicate PO",     icon: "duplicate", action: "po:duplicate",  detail: { id: po.id } },
                   { label: "Request support",  icon: "support",   action: "po:support",    detail: { id: po.id } },
                   *( %w[Delivered Cancelled].include?(po.status) ? [] : [{ label: "Cancel PO", icon: "cancel", action: "po:cancel", danger: true, detail: { id: po.id } }] ),
                 ] %>

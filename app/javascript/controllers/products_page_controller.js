@@ -220,7 +220,7 @@ export default class extends Controller {
       <a href="${p.href}" class="no-min-h block">
         <div class="flex items-center gap-3 md:gap-4 p-3 rounded-xl border border-[#e8e8e8] bg-white hover:shadow-md hover:translate-x-1 transition-all cursor-pointer">
           <div class="w-[64px] h-[64px] bg-[#f7f5ef] rounded-lg flex items-center justify-center shrink-0">
-            ${p.image ? `<img src="${p.image}" alt="${p.name}" class="w-full h-full object-contain mix-blend-multiply p-1">` : ""}
+            ${p.image ? `<img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover rounded-lg">` : ""}
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-[11px] font-bold text-[#377b82]">${p.vendor_name}</p>
@@ -292,8 +292,8 @@ export default class extends Controller {
   #productCardHTML(p) {
     return `<a href="${p.href}" class="product-card no-min-h block">
       <div class="flex flex-col rounded-lg bg-white shadow-sm cursor-pointer w-full md:w-[200px] md:shrink-0 border border-[#e8e8e8] hover:scale-[1.03] transition-transform">
-        <div class="relative shrink-0 bg-[#f7f5ef] flex items-center justify-center p-2 overflow-hidden rounded-t-lg aspect-square md:aspect-auto md:h-[135px]">
-          ${p.image ? `<img src="${p.image}" alt="${p.name}" class="h-full w-full object-contain mix-blend-multiply">` : ""}
+        <div class="relative shrink-0 bg-[#f7f5ef] flex items-center justify-center overflow-hidden rounded-t-lg aspect-square">
+          ${p.image ? `<img src="${p.image}" alt="${p.name}" class="h-full w-full object-cover">` : ""}
           <div class="absolute bottom-2 right-2">${this.#addToCartHTML(p)}</div>
         </div>
         <div class="flex-1 flex flex-col overflow-hidden p-[10px] gap-[8px]">

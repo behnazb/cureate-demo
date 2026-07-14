@@ -1,0 +1,44 @@
+<%#
+  Product image, with a real empty state.
+
+  MOST VENDORS WILL LAUNCH WITHOUT PHOTOS. A missing image is therefore the normal case,
+  not an error — it must never break a layout, and it must never remove a product from
+  the marketplace. (The buyer's product card used to `return` early on a blank image,
+  which silently deleted the listing from the gallery. That's fixed.)
+
+  The placeholder deliberately keeps the same beige plate and square footprint as a real
+  image, so a gallery of half-photographed products still lines up.
+
+  Locals:
+    product   — the Product
+    size      — :card (gallery tile) | :thumb (row/list) | :hero (PDP)
+    prompt    — optional String shown under the glyph (vendor side: "Add photo")
+    fit       — :cover | :contain. Defaults by size: gallery/strip cards fill the
+                thumbnail edge-to-edge (cover); row thumbs and the PDP hero keep
+                the whole packshot visible (contain).
+%>
+<%
+  size   = local_assigns.fetch(:size, :card)
+  prompt = local_assigns.fetch(:prompt, nil)
+  fit    = local_assigns.fetch(:fit, size == :card ? :cover : :contain)
+  glyph  = { card: 34, thumb: 18, hero: 56 }[size]
+  img_class = fit == :cover ? "h-full w-full object-cover" : "h-full w-full object-contain mix-blend-multiply"
+%>
+
+<% if product.image.present? %>
+  <img src="<%= product.image %>" alt="<%= product.name %>"
+       class="<%= img_class %>">
+<% else %>
+  <div class="flex flex-col items-center justify-center text-center" style="gap:6px;">
+    <%# Neutral image glyph — no emoji, no brand colour. It's an absence, not an alert. %>
+    <svg width="<%= glyph %>" height="<%= glyph %>" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="2.5" y="4.5" width="19" height="15" rx="2.5" stroke="#c4c4c4" stroke-width="1.4"/>
+      <circle cx="8.5" cy="10" r="1.6" stroke="#c4c4c4" stroke-width="1.4"/>
+      <path d="M3.5 17l4.7-4.3a2 2 0 0 1 2.7 0l3.2 3 2.1-1.8a2 2 0 0 1 2.6 0l1.7 1.5"
+            stroke="#c4c4c4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <% if prompt.present? %>
+      <span class="text-[10px] font-bold" style="color:#a1a4aa;"><%= prompt %></span>
+    <% end %>
+  </div>
+<% end %>

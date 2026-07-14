@@ -27,24 +27,36 @@ export default class extends Controller {
     this.boundChanged   = () => this.#render()
     this.boundToggle    = (e) => this.#syncOpen(e.detail.open)
     this.boundPoChanged = () => this.#render()
+    // Jump straight to the review/confirmation view (draft PO detail page's
+    // "Submit PO for Review"). detail.returnTo is where post-submit close should
+    // land — the PO page itself, so its status pill reloads as In-Review.
+    this.boundOpenConfirmation = (e) => {
+      this.returnTo = (e.detail && e.detail.returnTo) || null
+      this.view = "confirmation"
+      this.#renderConfirmation()
+      this.#switchView()
+    }
 
-    document.addEventListener("cart:changed",       this.boundChanged)
-    document.addEventListener("cart:drawer-toggle", this.boundToggle)
-    document.addEventListener("cart:po-changed",    this.boundPoChanged)
+    document.addEventListener("cart:changed",           this.boundChanged)
+    document.addEventListener("cart:drawer-toggle",     this.boundToggle)
+    document.addEventListener("cart:po-changed",        this.boundPoChanged)
+    document.addEventListener("cart:open-confirmation", this.boundOpenConfirmation)
 
     // Initial render — wait one tick for the cart controller to be connected.
     requestAnimationFrame(() => this.#render())
   }
   disconnect() {
-    document.removeEventListener("cart:changed",       this.boundChanged)
-    document.removeEventListener("cart:drawer-toggle", this.boundToggle)
-    document.removeEventListener("cart:po-changed",    this.boundPoChanged)
+    document.removeEventListener("cart:changed",           this.boundChanged)
+    document.removeEventListener("cart:drawer-toggle",     this.boundToggle)
+    document.removeEventListener("cart:po-changed",        this.boundPoChanged)
+    document.removeEventListener("cart:open-confirmation", this.boundOpenConfirmation)
   }
 
   // ─── Open / Close ──────────────────────────────────────────────────────────
   close() {
     findCartController(this.application)?.setDrawerOpen(false)
     this.view = "cart"
+    this.returnTo = null
     this.#switchView()
   }
 
@@ -71,7 +83,9 @@ export default class extends Controller {
     findCartController(this.application)?.setRepeatMode(event.target.value)
   }
 
-  // ─── Per-line delivery (review screen) ───────────────────────────────────────
+  // ─── Per-line delivery (draft cart + review screen) ─────────────────────────
+  // The buyer sets frequency per product in the Draft PO (screen 1) before
+  // submitting; the review screen shows the same controls for a final check.
   // Changing frequency resets the schedule to the vendor's preferred default for the
   // new frequency type (a date for "single", a weekday for weekly/biweekly).
   setLineFrequency(event) {
@@ -80,14 +94,120 @@ export default class extends Controller {
     const cart = findCartController(this.application); if (!cart) return
     const vendor = this.vendorsValue.find(v => v.id === vendorId) || {}
     const pref = vendor.preferred_delivery_day || "Mon"
-    const spec = freq === "single" ? this.#weekDates(cart)[pref] : pref
+    // single → one date; recurring → multi-select day array (starts at the pref day)
+    const spec = freq === "single" ? this.#weekDates(cart)[pref] : [pref]
     cart.setItemDelivery(vendorId, productId, freq, spec)
-    this.#renderConfirmation()
+    // The cart view re-renders via the cart:changed event; the confirmation
+    // body is not event-driven, so refresh it explicitly when it's on screen.
+    if (this.view === "confirmation") this.#renderConfirmation()
   }
   setLineSchedule(event) {
     const { vendorId, productId, freq } = event.target.dataset
     findCartController(this.application)?.setItemDelivery(vendorId, productId, freq, event.target.value)
-    this.#renderConfirmation()
+    if (this.view === "confirmation") this.#renderConfirmation()
+  }
+  // Toggle one weekday on a recurring line (multi-select). The last selected day
+  // can't be removed — a recurring order always has at least one delivery day.
+  toggleLineDay(event) {
+    const { vendorId, productId, day } = event.currentTarget.dataset
+    const cart = findCartController(this.application); if (!cart) return
+    const item = cart.items.find(i => i.vendorId === vendorId && i.productId === productId)
+    if (!item || (item.frequency || "single") === "single") return
+    let spec = Array.isArray(item.deliverySpec) ? [...item.deliverySpec] : (item.deliverySpec ? [item.deliverySpec] : [])
+    if (spec.includes(day)) {
+      if (spec.length > 1) spec = spec.filter(d => d !== day)
+    } else {
+      spec.push(day)
+    }
+    // Keep the vendor's weekday order regardless of click order.
+    const vendor = this.vendorsValue.find(v => v.id === vendorId) || {}
+    const days = (vendor.delivery_days && vendor.delivery_days.length) ? vendor.delivery_days : ["Mon", "Tue", "Wed", "Thu", "Fri"]
+    spec.sort((a, b) => days.indexOf(a) - days.indexOf(b))
+    cart.setItemDelivery(vendorId, productId, item.frequency, spec)
+    if (this.view === "confirmation") this.#renderConfirmation()
+  }
+  setLineRepeatUntil(event) {
+    const { vendorId, productId } = event.currentTarget.dataset
+    findCartController(this.application)?.setItemRepeatUntil(vendorId, productId, event.currentTarget.value)
+    if (this.view === "confirmation") this.#renderConfirmation()
+  }
+  // Fires on change (blur / Enter), not on every keystroke — the re-render that
+  // follows would otherwise steal focus mid-typing.
+  setLineNote(event) {
+    const { vendorId, productId } = event.target.dataset
+    findCartController(this.application)?.setItemNote(vendorId, productId, event.target.value.trim())
+    if (this.view === "confirmation") this.#renderConfirmation()
+  }
+
+  // Resolved frequency + schedule for a cart line, falling back to the vendor's
+  // preferred delivery day. Single source of the defaulting rule — used by the
+  // draft cart, the review screen, and the submit payload, so all three agree.
+  //
+  // spec shape: ISO date string for "single"; ARRAY of weekday abbrevs for
+  // weekly/biweekly (multi-select — e.g. ["Mon", "Wed"]). Legacy single-string
+  // recurring specs are normalized to a one-element array.
+  #lineDelivery(vendor, i, dates) {
+    const days = (vendor.delivery_days && vendor.delivery_days.length) ? vendor.delivery_days : ["Mon", "Tue", "Wed", "Thu", "Fri"]
+    const pref = vendor.preferred_delivery_day || days[0]
+    const freq = i.frequency || "single"
+    let spec = i.deliverySpec
+    if (freq === "single") {
+      spec = (typeof spec === "string" && spec) ? spec : dates[pref]
+    } else {
+      spec = Array.isArray(spec) ? spec : (spec ? [spec] : [pref])
+    }
+    return { days, freq, spec }
+  }
+
+  // The per-line delivery controls (frequency + schedule + order note), shared
+  // by the draft cart and the review screen.
+  //   One-time  → a date select (days within the PO week)
+  //   Recurring → multi-select day pills (e.g. Mondays AND Wednesdays) plus a
+  //               "Repeat until" end-date picker (blank = no end date)
+  #lineDeliveryControlsHTML(vendor, i, dates) {
+    const { days, freq, spec } = this.#lineDelivery(vendor, i, dates)
+    const ids = `data-vendor-id="${vendor.id}" data-product-id="${i.product.id}"`
+    const freqOpts = [["single", "One-time"], ["weekly", "Weekly"], ["biweekly", "Bi-weekly"]]
+      .map(([v, l]) => `<option value="${v}" ${v === freq ? "selected" : ""}>${l}</option>`).join("")
+    const selCls = "text-[11px] border border-[#e8e8e8] rounded-md px-2 h-[26px] bg-white text-[#444955] outline-none cursor-pointer hover:border-[#28ba93] transition-colors no-min-h"
+
+    let schedule
+    if (freq === "single") {
+      const schedOpts = days.map(d => dates[d] ? `<option value="${dates[d]}" ${dates[d] === spec ? "selected" : ""}>${this.#shortDate(dates[d])}</option>` : "").join("")
+      schedule = `<select data-action="change->cart-drawer#setLineSchedule" ${ids} data-freq="${freq}" class="${selCls}">${schedOpts}</select>`
+    } else {
+      // Multi-select day pills — toggling keeps at least one day selected.
+      schedule = `<span class="inline-flex items-center gap-1">` + days.map(d => {
+        const on = spec.includes(d)
+        return `<button type="button" data-action="click->cart-drawer#toggleLineDay" ${ids} data-day="${d}"
+                        class="no-min-h text-[11px] h-[26px] px-2.5 rounded-full border transition-colors ${on
+                          ? "bg-[#035257] text-white border-[#035257] font-bold"
+                          : "bg-white text-[#444955] border-[#e8e8e8] hover:border-[#28ba93]"}">${d}</button>`
+      }).join("") + `</span>`
+    }
+
+    const repeatUntil = freq !== "single"
+      ? `<span class="text-[11px] text-[#777]">Repeat until</span>
+         <input type="date" value="${this.#escAttr(i.repeatUntil || "")}"
+                data-action="change->cart-drawer#setLineRepeatUntil" ${ids}
+                class="text-[11px] border border-[#e8e8e8] rounded-md px-2 h-[26px] bg-white text-[#444955] outline-none cursor-pointer hover:border-[#28ba93] focus:border-[#28ba93] transition-colors no-min-h">`
+      : ""
+    return `
+      <span class="text-[11px] text-[#777]">Deliver</span>
+      <select data-action="change->cart-drawer#setLineFrequency" ${ids} class="${selCls}">${freqOpts}</select>
+      ${schedule}
+      ${repeatUntil}
+      <input type="text" value="${this.#escAttr(i.orderNote || "")}" maxlength="140"
+             placeholder="Add an order note here"
+             title="This note will appear on Purchase Orders and all Buyer &amp; Vendor order emails."
+             data-action="change->cart-drawer#setLineNote"
+             ${ids}
+             class="w-full text-[11px] border border-[#e8e8e8] rounded-md px-2 h-[26px] bg-white text-[#444955] placeholder-[#a1a4aa] outline-none focus:border-[#28ba93] transition-colors no-min-h">`
+  }
+
+  // Escape a string for safe interpolation into an HTML attribute.
+  #escAttr(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
   }
 
   // ─── Bottom CTAs ─────────────────────────────────────────────────────────────
@@ -148,9 +268,18 @@ export default class extends Controller {
         body: JSON.stringify({
           id: this.submittedPOId,
           delivery_week: cart.selectedDeliveryWeek,
-          items: cart.items.map(i => ({
-            vendor_id: i.vendorId, product_id: i.productId, quantity: i.quantity, unit: i.unit,
-          })),
+          // Per-line frequency ships with the PO. Defaults are resolved here with
+          // the same rule the UI used, so the server stores what the buyer saw.
+          items: cart.items.map(i => {
+            const vendor = this.vendorsValue.find(v => v.id === i.vendorId) || {}
+            const { freq, spec } = this.#lineDelivery(vendor, { ...i, product: { id: i.productId } }, this.#weekDates(cart))
+            return {
+              vendor_id: i.vendorId, product_id: i.productId, quantity: i.quantity, unit: i.unit,
+              frequency: freq, delivery_spec: spec,
+              repeat_until: freq === "single" ? null : (i.repeatUntil || null),
+              order_note: i.orderNote || null,
+            }
+          }),
         }),
       })
     } catch (e) {
@@ -174,13 +303,15 @@ export default class extends Controller {
     window.location.href = `/purchase_orders/${encodeURIComponent(this.submittedPOId)}`
   }
 
-  // X button / "Close and continue shopping" / auto-close timeout — back to the gallery.
+  // X button / "Close and continue shopping" / auto-close timeout — back to the
+  // gallery, or back to the originating page (e.g. the draft PO detail page, which
+  // reloads showing its new In-Review status) when the flow started there.
   finishToProducts() {
     clearInterval(this.countdownTimer)
     const cart = findCartController(this.application)
     cart?.clearActiveDraft()
     cart?.setDrawerOpen(false)
-    window.location.href = "/products"
+    window.location.href = this.returnTo || "/products"
   }
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -211,7 +342,8 @@ export default class extends Controller {
       this.vendorGroupsTarget.classList.remove("hidden")
       this.vendorGroupsTarget.classList.add("flex")
       this.subtotalBlockTarget.classList.remove("hidden")
-      this.vendorGroupsTarget.innerHTML = grouped.map(g => this.#vendorCardHTML(g)).join("")
+      const dates = this.#weekDates(cart)
+      this.vendorGroupsTarget.innerHTML = grouped.map(g => this.#vendorCardHTML(g, dates)).join("")
       const total = grouped.reduce((sum, g) => sum + g.vendorTotal, 0)
       this.subtotalTarget.textContent = `$${total.toFixed(2)}`
     }
@@ -318,7 +450,7 @@ export default class extends Controller {
     return `$${p.wholesale_unit_price.toFixed(2)} / ${p.unit_label || "unit"}`
   }
 
-  #vendorCardHTML(g) {
+  #vendorCardHTML(g, dates = {}) {
     const progress = g.progressPct
     const itemLabel = (g.products[0] && g.products[0].product.item_label) || "unit"
     const itemUnits = (g.products[0] && g.products[0].product.units_per_item) || 1
@@ -355,7 +487,8 @@ export default class extends Controller {
           : `<span class="text-[11px] text-[#888780]">Add ${remainingItems} more</span>`
       }
       return `
-      <div class="flex items-center justify-between px-4 py-3 bg-[#fbf9f6]" style="margin-bottom: 1px">
+      <div class="bg-[#fbf9f6]" style="margin-bottom: 1px">
+      <div class="flex items-center justify-between px-4 pt-3 pb-1">
         <div class="flex items-center gap-2" style="width: 65%">
           <div class="w-[65px] h-[60px] shrink-0 flex items-center justify-center">
             ${i.product.image ? `<img src="${i.product.image}" alt="${i.product.name}" class="w-full h-full object-contain mix-blend-multiply">` : ""}
@@ -364,9 +497,10 @@ export default class extends Controller {
             <span class="font-bold text-[#035257] text-[11px]">${g.vendor.name}</span>
             <span class="font-bold leading-tight text-[#444955] text-[11px]">${i.product.name}</span>
             <span class="text-[#1f1f1f] text-[11px]">${this.#linePrice(i.product)}</span>
-            ${moqTag}
           </div>
         </div>
+        <div class="flex flex-col items-end gap-1.5 shrink-0">
+        ${moqTag}
         <span class="inline-flex" data-controller="add-to-cart"
               data-add-to-cart-vendor-id-value="${g.vendor.id}"
               data-add-to-cart-product-id-value="${i.product.id}">
@@ -383,6 +517,11 @@ export default class extends Controller {
             </button>
           </div>
         </span>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 px-4 pb-3 md:pl-[89px]">
+        ${this.#lineDeliveryControlsHTML(g.vendor, i, dates)}
+      </div>
       </div>`
     }).join("")
 
@@ -423,16 +562,6 @@ export default class extends Controller {
           </div>
         </div>
         ${g.products.map(i => {
-          const days = (g.vendor.delivery_days && g.vendor.delivery_days.length) ? g.vendor.delivery_days : ["Mon", "Tue", "Wed", "Thu", "Fri"]
-          const pref = g.vendor.preferred_delivery_day || days[0]
-          const freq = i.frequency || "single"
-          const spec = i.deliverySpec || (freq === "single" ? dates[pref] : pref)
-          const freqOpts = [["single", "Single order"], ["weekly", "Weekly"], ["biweekly", "Bi-weekly"]]
-            .map(([v, l]) => `<option value="${v}" ${v === freq ? "selected" : ""}>${l}</option>`).join("")
-          const schedOpts = freq === "single"
-            ? days.map(d => dates[d] ? `<option value="${dates[d]}" ${dates[d] === spec ? "selected" : ""}>${this.#shortDate(dates[d])}</option>` : "").join("")
-            : days.map(d => `<option value="${d}" ${d === spec ? "selected" : ""}>${this.#dayName(d)}</option>`).join("")
-          const selCls = "text-[11px] border border-[#e8e8e8] rounded-md px-2 h-[26px] bg-white text-[#444955] outline-none cursor-pointer hover:border-[#28ba93] transition-colors"
           return `
           <div class="p-4 bg-[#fbf9f6]" style="margin-bottom: 1px">
             <div class="flex items-center justify-between">
@@ -451,9 +580,7 @@ export default class extends Controller {
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-2 mt-3 md:pl-[73px]">
-              <span class="text-[11px] text-[#777]">Deliver by</span>
-              <select data-action="change->cart-drawer#setLineFrequency" data-vendor-id="${g.vendor.id}" data-product-id="${i.product.id}" class="${selCls}">${freqOpts}</select>
-              <select data-action="change->cart-drawer#setLineSchedule" data-vendor-id="${g.vendor.id}" data-product-id="${i.product.id}" data-freq="${freq}" class="${selCls}">${schedOpts}</select>
+              ${this.#lineDeliveryControlsHTML(g.vendor, i, dates)}
             </div>
           </div>`
         }).join("")}

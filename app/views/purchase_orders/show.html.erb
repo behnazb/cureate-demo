@@ -1,14 +1,19 @@
 <% content_for :title, "#{@po.id} — Cureate Connect" %>
 <% card_class = "bg-white border border-[#e8e8e8] rounded-xl shadow-[2px_2px_10px_0px_rgba(156,153,153,0.25)]" %>
 <%
-  # Line items for the header "Add to Order" / "Duplicate PO" CTA (T11).
+  # Line items for the draft CTAs ("Add More to Order" / "Submit PO for Review").
+  # Includes the per-line schedule + note so a reloaded draft keeps what the buyer set.
   po_line_items = @po.line_items.map { |li|
-    { vendorId: li.vendor_id, productId: li.product_id, quantity: li.quantity, unit: li.unit }
+    { vendorId: li.vendor_id, productId: li.product_id, quantity: li.quantity, unit: li.unit,
+      frequency: li.frequency, deliverySpec: li.delivery_spec,
+      repeatUntil: li.repeat_until, orderNote: li.order_note }
   }
 %>
 
 <div data-controller="po-detail"
      data-po-detail-line-items-value="<%= po_line_items.to_json %>"
+     data-po-detail-po-id-value="<%= @po.id %>"
+     data-po-detail-delivery-week-value="<%= @po.delivery_date %>"
      class="flex flex-1 min-h-0 bg-white font-['Lato']">
   <%= render "shared/sidebar" %>
 
@@ -24,32 +29,14 @@
         </svg>
         <span class="font-bold text-[#1f1f1f] truncate"><%= @po.id %></span>
       </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <% if @po.draft? %>
-          <button data-action="click->po-detail#loadToCart"
-                  class="no-min-h flex bg-[#28ba93] hover:bg-[#22a882] transition-colors items-center gap-2 rounded-full px-4 h-[38px] text-white font-bold text-[13px] whitespace-nowrap">
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" class="shrink-0">
-              <path d="M2 3h2l2.4 9.6A1 1 0 007.36 14h7.28a1 1 0 00.96-.72L17 7H5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="8" cy="17" r="1" fill="white"/>
-              <circle cx="14" cy="17" r="1" fill="white"/>
-            </svg>
-            Add to Order
-          </button>
-        <% else %>
-          <button data-action="click->po-detail#loadToCart"
-                  class="no-min-h flex bg-[#28ba93] hover:bg-[#22a882] transition-colors items-center gap-2 rounded-full px-4 h-[38px] text-white font-bold text-[13px] whitespace-nowrap">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" class="shrink-0">
-              <rect x="7" y="7" width="11" height="11" rx="2.5" stroke="white" stroke-width="1.6"/>
-              <path d="M13 4H5a2 2 0 00-2 2v8" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-            Duplicate PO
-          </button>
-        <% end %>
-      </div>
+      <%# Header actions stay empty — draft CTAs ("Add More to Order" / "Submit PO
+          for Review") live at the bottom of the PO details; locked POs are read-only. %>
     </div>
 
-    <%# Scrollable content %>
-    <div class="flex-1 overflow-y-auto px-4 md:px-9 py-4 md:py-6">
+    <%# Scrollable content.
+        Warm canvas (#f7f5ef) so the white cards sit ON something — matched to the
+        vendor Order detail page, which is the same object seen from the other side. %>
+    <div class="flex-1 overflow-y-auto px-4 md:px-9 py-4 md:py-6 bg-[#f7f5ef]">
 
       <%# PO Details card %>
       <div class="<%= card_class %> p-5 mb-6">
@@ -76,7 +63,6 @@
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <button class="no-min-h border border-[#035257] text-[#035257] text-[11px] font-bold rounded-full px-3 h-[30px] hover:bg-[#f0fafa] transition-colors whitespace-nowrap">Download CSV</button>
-            <%# "Add to Order" / "Duplicate PO" now live in the page-header CTA (T11) %>
             <%= render "shared/po_dropdown_menu", items: [
               *( @po.draft? ? [{ label: "Add more to PO", icon: "add", action: "po:add-more", detail: { id: @po.id } }] : [] ),
               { label: "Request support", icon: "support", action: "po:support", detail: { id: @po.id } },
@@ -162,7 +148,6 @@
                 { label: "Add more to PO", icon: "add",  action: "po:add-more",  detail: { id: @po.id, vendor_id: vendor.id } },
                 { label: "Edit order",     icon: "edit", action: "po:edit",      detail: { id: @po.id, vendor_id: vendor.id } },
               ] : [] ),
-              { label: "Duplicate order", icon: "duplicate", action: "po:duplicate-vendor", detail: { id: @po.id, vendor_id: vendor.id } },
               *( @po.draft? ? [{ label: "Delete from PO", icon: "delete", action: "po:delete-vendor", danger: true, detail: { id: @po.id, vendor_id: vendor.id } }] : [] ),
             ] %>
           </div>
@@ -172,7 +157,12 @@
           <% f = group[:fulfillment] %>
           <% method = f && (f[:method] || "Delivery") %>
           <% shipping = (method == "Shipping") %>
-          <% sched = group[:items].map { |i| i.delivery_schedule }.compact.first %>
+          <%# Per-product frequency means lines can carry different schedules. A single
+              shared schedule renders in the summary; mixed schedules render per line
+              below, and the summary says so. %>
+          <% scheds = group[:items].map { |i| i.delivery_schedule }.compact.uniq %>
+          <% mixed_scheds = scheds.length > 1 %>
+          <% sched = mixed_scheds ? "Varies by product — see line items" : scheds.first %>
           <% if f || sched %>
             <% lbl = "text-[11px] font-bold text-[#777] uppercase tracking-wide" %>
             <% val = "text-[12px] text-[#444955]" %>
@@ -218,6 +208,14 @@
                     <p class="text-[11px] text-[#999] mt-0.5">
                       ID #<%= item.product.id %><%= " · UPC: #{item.product.upc}" if item.product.upc %>
                     </p>
+                    <% if mixed_scheds && item.delivery_schedule.present? %>
+                      <p class="text-[11px] mt-1 flex items-center gap-1 <%= item.recurring? ? "font-bold text-[#065f46]" : "text-[#777]" %>">
+                        <% if item.recurring? %>
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" class="shrink-0"><path d="M1 5a4 4 0 108 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M7 3l2 2-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <% end %>
+                        <%= item.delivery_schedule %>
+                      </p>
+                    <% end %>
                     <% if item.order_note.present? %>
                       <p class="text-[11px] text-[#777] italic mt-1.5">&ldquo;<%= item.order_note %>&rdquo;</p>
                     <% end %>
@@ -230,6 +228,9 @@
                 <div class="md:hidden px-4 py-3.5">
                   <p class="text-[13px] font-bold text-[#444955] mb-1"><%= item.product.name %></p>
                   <p class="text-[11px] text-[#999] mb-1"><%= item.quantity %> <%= item.unit %> · $<%= format("%.2f", item.unit_price) %>/unit</p>
+                  <% if mixed_scheds && item.delivery_schedule.present? %>
+                    <p class="text-[11px] mb-1 <%= item.recurring? ? "font-bold text-[#065f46]" : "text-[#777]" %>"><%= item.delivery_schedule %></p>
+                  <% end %>
                   <% if item.order_note.present? %>
                     <p class="text-[11px] text-[#777] italic mb-2">&ldquo;<%= item.order_note %>&rdquo;</p>
                   <% end %>
@@ -248,8 +249,10 @@
         <div class="bg-white border border-[#e8e8e8] rounded-xl p-12 text-center mb-4">
           <p class="text-[14px] font-bold text-[#444955]">No items on this purchase order</p>
           <p class="text-[12px] text-[#777] mt-1">Add products to get started</p>
-          <%= link_to "+ Add Products", products_path,
-              class: "mt-4 inline-flex bg-[#28ba93] text-white text-[13px] font-bold rounded-full px-6 h-[36px] items-center hover:bg-[#22a882] transition-colors no-min-h" %>
+          <%= link_to products_path, class: primary_cta_class("mt-4") do %>
+            <%= cta_plus_icon %>
+            Add Products
+          <% end %>
         </div>
       <% else %>
         <div class="<%= card_class %> overflow-hidden mb-8">
@@ -268,6 +271,20 @@
             <span class="text-[20px] font-black text-[#1f1f1f]">$<%= format("%.2f", @total) %></span>
           </div>
         </div>
+
+        <%# Draft CTAs — the draft's two forward paths, at the natural end of review. %>
+        <% if @po.draft? %>
+          <div class="flex flex-col-reverse md:flex-row items-stretch md:items-center justify-end gap-3 mb-8">
+            <button data-action="click->po-detail#addMoreToOrder"
+                    class="no-min-h h-[46px] px-6 rounded-full border border-[#28ba93] bg-white text-[#28ba93] font-bold text-[14px] hover:bg-[#f0fdf8] transition-colors whitespace-nowrap">
+              + Add More to Order
+            </button>
+            <button data-action="click->po-detail#submitForReview"
+                    class="no-min-h h-[46px] px-8 rounded-full bg-[#28ba93] text-white font-bold text-[15px] hover:bg-[#22a882] transition-colors whitespace-nowrap">
+              Submit PO for Review
+            </button>
+          </div>
+        <% end %>
       <% end %>
 
     </div>

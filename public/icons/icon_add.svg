@@ -1,0 +1,14 @@
+<!--
+  Brand plus.
+
+  Redrawn from the uploaded asset, which was a 2px bar on a 20px canvas. At the sizes this
+  icon actually gets used (11-14px, beside 13px bold Lato), 2/20 renders as a ~1.2px
+  hairline — visibly lighter than the type it sits next to, and than the bag icon in the
+  buyer's "Add to Draft PO" CTA. 2.8/20 lands at ~1.96px at 14px, which matches both.
+
+  Stroked rather than filled so the weight stays legible if it's ever scaled.
+  Used via the .icon-add mask utility (takes currentColor), or inlined directly.
+-->
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 3.2v13.6M3.2 10h13.6" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+</svg>

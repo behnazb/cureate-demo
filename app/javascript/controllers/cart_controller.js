@@ -98,14 +98,40 @@ export default class extends Controller {
     if (quantity > 0 && isNew) this.#emit("cart:item-added", { vendorId, productId })
   }
 
-  // Per-line delivery scheduling (set on the review screen). frequency is
-  // "single" | "weekly" | "biweekly"; deliverySpec is an ISO date (single) or a
-  // weekday abbrev like "Mon" (weekly/biweekly). Persists with the cart item.
+  // Per-line delivery scheduling — set at the product level in the Draft PO
+  // (cart view) before submit, and editable again on the review screen. frequency
+  // is "single" | "weekly" | "biweekly"; deliverySpec is an ISO date (single) or
+  // an ARRAY of weekday abbrevs like ["Mon", "Wed"] (weekly/biweekly, multi-
+  // select). Persists with the cart item.
   setItemDelivery(vendorId, productId, frequency, deliverySpec) {
     const draft = this.#activeDraft(); if (!draft) return
     draft.items = draft.items.map(i =>
       (i.vendorId === vendorId && i.productId === productId)
         ? { ...i, frequency, deliverySpec }
+        : i)
+    this.#persist()
+    this.#emit("cart:changed")
+  }
+
+  // Recurring end date for a line ("Repeat until"). ISO date string; empty/null
+  // means the schedule has no end date. Persists with the cart item.
+  setItemRepeatUntil(vendorId, productId, iso) {
+    const draft = this.#activeDraft(); if (!draft) return
+    draft.items = draft.items.map(i =>
+      (i.vendorId === vendorId && i.productId === productId)
+        ? { ...i, repeatUntil: iso || null }
+        : i)
+    this.#persist()
+    this.#emit("cart:changed")
+  }
+
+  // Per-line order note (set in the draft cart, next to frequency). Appears on
+  // the submitted PO and on buyer & vendor order emails. Persists with the item.
+  setItemNote(vendorId, productId, note) {
+    const draft = this.#activeDraft(); if (!draft) return
+    draft.items = draft.items.map(i =>
+      (i.vendorId === vendorId && i.productId === productId)
+        ? { ...i, orderNote: note }
         : i)
     this.#persist()
     this.#emit("cart:changed")
@@ -125,42 +151,29 @@ export default class extends Controller {
     this.#emit("cart:changed")
   }
 
-  // Load a set of line items into a draft and make it the active one — used by the
-  // PO detail page's "Add to Order" / "Duplicate PO" CTA (T11). Lands them in the
-  // next delivery week that has no in-progress draft, so an existing cart is kept.
-  loadDraftItems(lineItems) {
-    const week = this.#nextOpenDeliveryWeek()
+  // Load a specific PO's lines as the active draft UNDER ITS OWN PO# and delivery
+  // week. Used by the draft PO detail page's "Add More to Order" / "Submit PO for
+  // Review" CTAs — submitting then replaces the server record for this id,
+  // flipping it to In Review.
+  loadDraftForPO(poId, weekISO, lineItems) {
+    const week = weekISO || this.state.selectedDeliveryWeek
     this.state.selectedDeliveryWeek = week
-    const draft = this.#ensureDraft(week)
-    draft.items = (lineItems || []).map(li => ({
-      vendorId:  li.vendorId,
-      productId: li.productId,
-      quantity:  Math.max(1, parseInt(li.quantity, 10) || 1),
-      unit:      li.unit === "cases" ? "cases" : "units",
-    }))
+    this.state.draftsByWeek[week] = {
+      poId,
+      items: (lineItems || []).map(li => ({
+        vendorId:     li.vendorId,
+        productId:    li.productId,
+        quantity:     Math.max(1, parseInt(li.quantity, 10) || 1),
+        unit:         li.unit === "cases" ? "cases" : "units",
+        frequency:    li.frequency    || undefined,
+        deliverySpec: li.deliverySpec || undefined,
+        repeatUntil:  li.repeatUntil  || undefined,
+        orderNote:    li.orderNote    || undefined,
+      })),
+    }
     this.#persist()
     this.#emit("cart:changed")
     this.#emit("cart:po-changed")
-  }
-
-  #nextOpenDeliveryWeek() {
-    let week = this.state.selectedDeliveryWeek
-    for (let i = 0; i < 52; i++) {
-      const draft = this.state.draftsByWeek[week]
-      if (!draft || draft.items.length === 0) return week
-      week = this.#addDays(week, 7)
-    }
-    return week
-  }
-
-  #addDays(iso, n) {
-    const [y, m, d] = iso.split("-").map(Number)
-    const date = new Date(y, m - 1, d)
-    date.setDate(date.getDate() + n)
-    const yy = date.getFullYear()
-    const mm = String(date.getMonth() + 1).padStart(2, "0")
-    const dd = String(date.getDate()).padStart(2, "0")
-    return `${yy}-${mm}-${dd}`
   }
 
   // Used after a PO is submitted: retire the week's draft so the next order for
