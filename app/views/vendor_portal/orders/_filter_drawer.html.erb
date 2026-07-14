@@ -1,0 +1,164 @@
+<%#
+  Vendor Orders filter drawer (PRD story 2).
+
+  Deliberately the SAME component as the buyer's product FilterPanel — slide-in from
+  the left on desktop, full-screen on mobile, identical header, identical checkbox
+  treatment, identical Apply CTA. The one difference is under the hood: the buyer's
+  panel filters a static list in JS; vendor orders are filtered server-side, so this
+  is a GET form and "Apply" submits it.
+
+  Locals: buyer_options, location_options, buyer_filters, location_filters, date_filter,
+          active_tab, search, view, group_by, active_count
+%>
+<div data-controller="filter-drawer">
+
+  <%# Trigger — lives next to the table/board toggle %>
+  <button type="button" data-action="filter-drawer#open"
+          class="no-min-h h-[32px] px-3.5 rounded-full text-[12px] font-bold flex items-center gap-1.5 border transition-colors <%= active_count.positive? ? 'bg-[#1f1f1f] text-white border-[#1f1f1f]' : 'text-[#777] border-[#a1a4aa] hover:border-[#777] hover:text-[#1f1f1f]' %>">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <path d="M1 2.5h11M3 6.5h7M5.5 10.5h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    Filters
+    <% if active_count.positive? %>
+      <span class="text-[10px] font-black bg-white/20 rounded-full px-1.5 py-0.5"><%= active_count %></span>
+    <% end %>
+  </button>
+
+  <%# Backdrop %>
+  <div data-filter-drawer-target="backdrop"
+       data-action="click->filter-drawer#close"
+       class="hidden fixed inset-0 bg-black/40 z-[70]"></div>
+
+  <%# Panel %>
+  <div data-filter-drawer-target="panel"
+       class="hidden fixed z-[80] bg-white overflow-hidden flex-col inset-0 md:inset-y-0 md:left-0 md:right-auto md:w-[380px] md:shadow-[4px_0_24px_rgba(0,0,0,0.1)]">
+
+    <%= form_with(url: vendor_orders_path, method: :get, local: true,
+          data: { filter_drawer_target: "form" },
+          class: "flex flex-col h-full") do %>
+
+      <%# Carry the non-filter state through the form. NOTE: no hidden field for
+          group_by — the checkbox below owns that param. A hidden field would win when
+          the box is unchecked, making it impossible to turn grouping back off. %>
+      <%= hidden_field_tag :tab, active_tab %>
+      <%= hidden_field_tag :q, search %>
+      <%= hidden_field_tag :view, view %>
+
+      <%# Header %>
+      <div class="flex items-center justify-between px-5 py-4 border-b border-[#e8e8e8] shrink-0">
+        <div class="flex items-center gap-2">
+          <h2 class="text-[18px] font-black text-[#1f1f1f]">Filters</h2>
+          <span data-filter-drawer-target="count"
+                class="hidden bg-[#28ba93] text-white text-[11px] font-bold rounded-full w-5 h-5 items-center justify-center">0</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <%= link_to "Clear all", vendor_orders_path(tab: active_tab, view: view),
+                data: { filter_drawer_target: "clearButton" },
+                class: "no-min-h text-[12px] text-[#035257] font-bold hover:underline #{'hidden' if active_count.zero?}" %>
+          <button type="button" data-action="filter-drawer#close"
+                  class="no-min-h w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f0f0f0] transition-colors">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M1 1l12 12M13 1L1 13" stroke="#1f1f1f" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <%# Sections %>
+      <div class="flex-1 overflow-y-auto">
+
+        <div class="px-5 pt-5 pb-2">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-[#a1a4aa]">Order</p>
+        </div>
+
+        <%# Buyer %>
+        <div class="px-5 mb-4" data-controller="disclose" data-disclose-open-value="true">
+          <button type="button" data-action="click->disclose#toggle" class="no-min-h w-full flex items-center justify-between mb-2">
+            <span class="text-[13px] font-bold text-[#1f1f1f]">Buyer</span>
+            <span data-disclose-target="caret" class="text-[#a1a4aa] text-[10px] transition-transform duration-200 rotate-180">▾</span>
+          </button>
+          <div data-disclose-target="body" class="overflow-hidden">
+            <div class="flex flex-col gap-1">
+              <% buyer_options.each do |name| %>
+                <label class="flex items-center gap-2.5 py-1 cursor-pointer group">
+                  <%= check_box_tag "buyers[]", name, buyer_filters.include?(name),
+                        id: nil,
+                        data: { action: "change->filter-drawer#toggleCheckbox" },
+                        class: "drawer-checkbox hidden" %>
+                  <div data-checkbox-box class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all <%= buyer_filters.include?(name) ? 'bg-[#28ba93] border-[#28ba93]' : 'border-[#a1a4aa] group-hover:border-[#28ba93]' %>">
+                    <img data-checkbox-check src="/icon_checkmark.svg" alt="" class="<%= 'hidden' unless buyer_filters.include?(name) %> w-[9px] h-[9px]">
+                  </div>
+                  <span class="text-[13px] transition-colors text-[#444955] group-hover:text-[#1f1f1f]"><%= name %></span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <%# Delivery location %>
+        <div class="px-5 mb-4" data-controller="disclose" data-disclose-open-value="true">
+          <button type="button" data-action="click->disclose#toggle" class="no-min-h w-full flex items-center justify-between mb-2">
+            <span class="text-[13px] font-bold text-[#1f1f1f]">Delivery location</span>
+            <span data-disclose-target="caret" class="text-[#a1a4aa] text-[10px] transition-transform duration-200 rotate-180">▾</span>
+          </button>
+          <div data-disclose-target="body" class="overflow-hidden">
+            <div class="flex flex-col gap-1">
+              <% location_options.each do |name| %>
+                <label class="flex items-center gap-2.5 py-1 cursor-pointer group">
+                  <%= check_box_tag "locations[]", name, location_filters.include?(name),
+                        id: nil,
+                        data: { action: "change->filter-drawer#toggleCheckbox" },
+                        class: "drawer-checkbox hidden" %>
+                  <div data-checkbox-box class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all <%= location_filters.include?(name) ? 'bg-[#28ba93] border-[#28ba93]' : 'border-[#a1a4aa] group-hover:border-[#28ba93]' %>">
+                    <img data-checkbox-check src="/icon_checkmark.svg" alt="" class="<%= 'hidden' unless location_filters.include?(name) %> w-[9px] h-[9px]">
+                  </div>
+                  <span class="text-[13px] transition-colors text-[#444955] group-hover:text-[#1f1f1f]"><%= name %></span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-5 pt-2 pb-2">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-[#a1a4aa]">Delivery</p>
+        </div>
+
+        <%# Delivery date %>
+        <div class="px-5 mb-4" data-controller="disclose" data-disclose-open-value="true">
+          <button type="button" data-action="click->disclose#toggle" class="no-min-h w-full flex items-center justify-between mb-2">
+            <span class="text-[13px] font-bold text-[#1f1f1f]">Delivery date</span>
+            <span data-disclose-target="caret" class="text-[#a1a4aa] text-[10px] transition-transform duration-200 rotate-180">▾</span>
+          </button>
+          <div data-disclose-target="body" class="overflow-hidden">
+            <%= date_field_tag :date, date_filter,
+                  data: { action: "change->filter-drawer#syncCounts" },
+                  class: "w-full h-[40px] rounded-lg border border-[#a1a4aa] px-3 text-[13px] text-[#444955] bg-white outline-none focus:border-[#28ba93] transition-colors" %>
+          </div>
+        </div>
+
+        <%# Group by location — PRD story 2: "orders destined for the same location can
+            be grouped together." A view option, so it lives with the filters. %>
+        <div class="px-5 mb-4 pt-2 border-t border-[#f0f0f0]">
+          <label class="flex items-center gap-2.5 py-2 cursor-pointer group">
+            <%= check_box_tag :group_by, "location", group_by == "location",
+                  id: nil,
+                  data: { action: "change->filter-drawer#toggleCheckbox" },
+                  class: "drawer-checkbox hidden" %>
+            <div data-checkbox-box class="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all <%= group_by == 'location' ? 'bg-[#28ba93] border-[#28ba93]' : 'border-[#a1a4aa] group-hover:border-[#28ba93]' %>">
+              <img data-checkbox-check src="/icon_checkmark.svg" alt="" class="<%= 'hidden' unless group_by == 'location' %> w-[9px] h-[9px]">
+            </div>
+            <span class="text-[13px] font-bold text-[#444955] group-hover:text-[#1f1f1f]">Group by delivery location</span>
+          </label>
+        </div>
+      </div>
+
+      <%# Apply %>
+      <div class="shrink-0 px-5 py-4 border-t border-[#e8e8e8] bg-white">
+        <button type="submit"
+                class="no-min-h w-full h-[52px] bg-[#28ba93] text-white font-bold text-[15px] rounded-full hover:bg-[#22a882] transition-colors">
+          Apply Filters<span data-filter-drawer-target="applyCount"></span>
+        </button>
+      </div>
+    <% end %>
+  </div>
+</div>

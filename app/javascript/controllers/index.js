@@ -25,6 +25,13 @@ import PoDetailController         from "./po_detail_controller"
 import DiscloseController         from "./disclose_controller"
 import ProductCardController      from "./product_card_controller"
 import RowLinkController          from "./row_link_controller"
+import PersonaSwitcherController  from "./persona_switcher_controller"
+import ProofPhotoController       from "./proof_photo_controller"
+import FilterDrawerController     from "./filter_drawer_controller"
+import OrderActionsController     from "./order_actions_controller"
+import BackController             from "./back_controller"
+import ProductDrawerController    from "./product_drawer_controller"
+import InvoiceController          from "./invoice_controller"
 
 application.register("cart",                  CartController)
 application.register("cart-drawer",           CartDrawerController)
@@ -45,3 +52,10 @@ application.register("po-detail",              PoDetailController)
 application.register("disclose",              DiscloseController)
 application.register("product-card",          ProductCardController)
 application.register("row-link",              RowLinkController)
+application.register("persona-switcher",      PersonaSwitcherController)
+application.register("proof-photo",           ProofPhotoController)
+application.register("filter-drawer",         FilterDrawerController)
+application.register("order-actions",         OrderActionsController)
+application.register("back",                  BackController)
+application.register("product-drawer",        ProductDrawerController)
+application.register("invoice",               InvoiceController)

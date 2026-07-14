@@ -1,0 +1,192 @@
+<% content_for :title, "Dashboard — 2Betties · Cureate Connect" %>
+<%
+  hour = Time.now.hour
+  greeting = hour < 12 ? "Good morning" : (hour < 18 ? "Good afternoon" : "Good evening")
+
+  card = "bg-white border border-[#e8e8e8] rounded-xl"
+
+  stats = [
+    { key: :visits,     label: "Visits",          value: number_with_delimiter(@visits),
+      series: @visits_series,     color: "#28ba93" },
+    { key: :orders,     label: "Orders",          value: number_with_delimiter(@orders),
+      series: @orders_series,     color: "#1e40af" },
+    { key: :conversion, label: "Conversion rate", value: "#{format('%.1f', @conversion)}%",
+      series: @conversion_series, color: "#a33500" },
+    { key: :revenue,    label: "Revenue",         value: "$#{number_with_delimiter(@revenue.round)}",
+      series: @revenue_series,    color: "#5b21b6" },
+  ]
+%>
+
+<div class="flex flex-1 min-h-0 bg-white font-['Lato']" data-controller="disclose">
+
+  <%= render "shared/sidebar" %>
+
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+    <div class="flex-1 overflow-y-auto bg-white px-4 md:px-9 py-6 md:py-8">
+      <div style="max-width:1100px;">
+
+        <%# ── Greeting ───────────────────────────────────────────────────── %>
+        <div class="flex items-center" style="gap:16px; margin-bottom:32px;">
+          <div class="bg-[#f7f5ef] flex items-center justify-center overflow-hidden border border-[#e8e8e8] shrink-0"
+               style="width:56px; height:56px; border-radius:8px;">
+            <% if @vendor.logo.present? %>
+              <img src="<%= @vendor.logo %>" alt="<%= @vendor.name %>" class="w-full h-full object-cover">
+            <% end %>
+          </div>
+          <div style="min-width:0;">
+            <h1 class="text-[24px] font-bold text-[#1f1f1f]" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <%= greeting %>, <%= @vendor.name %>
+            </h1>
+            <div class="flex items-center flex-wrap text-[12px] text-[#777]" style="gap:8px; margin-top:2px;">
+              <span><%= pluralize(@active_listings, "active listing") %></span>
+              <span style="color:#e8e8e8;">|</span>
+              <a href="/vendors/<%= @vendor.id %>" class="no-min-h inline-flex items-center hover:text-[#1f1f1f] transition-colors" style="gap:5px;">
+                <%= @shop_url %>
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" class="shrink-0" aria-hidden="true">
+                  <path d="M4.6 7.4a2 2 0 0 0 2.8 0l2-2a2 2 0 0 0-2.8-2.8l-.5.5M7.4 4.6a2 2 0 0 0-2.8 0l-2 2a2 2 0 1 0 2.8 2.8l.5-.5"
+                        stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <%#
+          ── Customize your shop ─────────────────────────────────────────────
+          Dismissible, because it's an invitation and not a task. It links to the vendor's
+          public profile (the buyer-facing shop page), which is where "edit shop" will live
+          once that epic exists.
+        %>
+        <div data-disclose-target="body" class="<%= card %> flex items-center" style="gap:14px; padding:16px; margin-bottom:32px;">
+          <span class="shrink-0 flex items-center justify-center rounded-full"
+                style="width:32px; height:32px; background:#28ba93;">
+            <span class="icon-check" style="width:13px; height:13px; color:#fff;"></span>
+          </span>
+          <div class="flex-1" style="min-width:0;">
+            <p class="text-[14px] font-bold text-[#1f1f1f]">Customize your shop</p>
+            <p class="text-[12px] text-[#777] mt-0.5">
+              Insight into you and your business goes a long way with buyers.
+            </p>
+          </div>
+          <a href="/vendors/<%= @vendor.id %>"
+             class="no-min-h shrink-0 h-[34px] px-4 rounded-full text-[12px] font-bold text-[#1f1f1f] border border-[#1f1f1f] hover:bg-[#f0f0f0] transition-colors flex items-center">
+            Edit shop
+          </a>
+          <button type="button" data-action="disclose#toggle"
+                  class="no-min-h shrink-0 w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#f0f0f0] transition-colors" title="Dismiss">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+              <path d="M1 1l12 12M13 1L1 13" stroke="#1f1f1f" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <%#
+          ── Top tasks ───────────────────────────────────────────────────────
+          Not vanity metrics — the things that are WAITING ON THE VENDOR. Each line is a
+          count of work, and a zero is a good result, so zeros stay quiet and non-zeros
+          carry weight. That's the whole design: a vendor should be able to tell in one
+          glance whether they owe anyone anything.
+        %>
+        <h2 class="text-[16px] font-bold text-[#1f1f1f]" style="margin-bottom:12px;">Top tasks</h2>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin-bottom:32px;">
+          <% @tasks.each do |task| %>
+            <% pending = task[:lines].sum { |l| l[:n] } %>
+            <%= link_to task[:href],
+                  class: "no-min-h #{card} block hover:shadow-[2px_2px_10px_0px_rgba(156,153,153,0.25)] transition-shadow",
+                  style: "padding:16px;" do %>
+              <div class="flex items-center" style="gap:8px; margin-bottom:10px;">
+                <p class="text-[15px] font-bold text-[#1f1f1f]"><%= task[:label] %></p>
+                <% if task[:soon] %>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style="background:#f0f0f0; color:#777;">Coming soon</span>
+                <% elsif pending.positive? %>
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" class="shrink-0" aria-hidden="true">
+                    <path d="M2 7h9M7.5 3.5L11 7l-3.5 3.5" stroke="#1f1f1f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                <% end %>
+              </div>
+
+              <% task[:lines].each do |line| %>
+                <p class="text-[13px]" style="margin-bottom:3px; color:<%= line[:n].positive? ? '#1f1f1f' : '#a1a4aa' %>;">
+                  <span class="font-bold"><%= line[:n] %></span> <%= line[:text] %>
+                </p>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+
+        <%# ── Stats ──────────────────────────────────────────────────────── %>
+        <div class="flex items-center justify-between" style="margin-bottom:12px;">
+          <h2 class="text-[16px] font-bold text-[#1f1f1f]">Stats</h2>
+
+          <%# Date range — a pill group, not a select, since there are only three. %>
+          <div class="flex items-center overflow-hidden" style="border:1px solid #a1a4aa; border-radius:9999px; height:32px;">
+            <% VendorPortal::DashboardController::RANGES.each_with_index do |(value, label), i| %>
+              <% active = @range == value %>
+              <%= link_to label.sub("Last ", ""), vendor_dashboard_path(range: value),
+                    class: "no-min-h flex items-center justify-center text-[12px] font-bold transition-colors #{active ? 'text-white' : 'text-[#777] hover:bg-[#f0f0f0]'}",
+                    style: "padding:0 14px; height:32px;#{' background-color:#1f1f1f;' if active}#{' border-left:1px solid #a1a4aa;' if i.positive?}" %>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="<%= card %> overflow-hidden">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));">
+            <% stats.each_with_index do |stat, i| %>
+              <%
+                paths = sparkline_paths(stat[:series], width: 100, height: 34)
+                delta = @deltas[stat[:key]]
+                gid   = "spark-#{stat[:key]}"
+              %>
+              <div style="padding:16px;<%= ' border-left:1px solid #f0f0f0;' if i.positive? %>">
+
+                <div class="flex items-center" style="gap:8px;">
+                  <p class="text-[11px] font-bold uppercase tracking-wide text-[#777]"><%= stat[:label] %></p>
+                  <span class="text-[11px] font-bold" style="color:<%= delta_color(delta) %>;">
+                    <%= delta_label(delta) %>
+                  </span>
+                </div>
+
+                <p class="text-[26px] font-black text-[#1f1f1f]" style="margin:4px 0 8px;"><%= stat[:value] %></p>
+
+                <%#
+                  Inline SVG sparkline. No charting library: these are lists of points, and
+                  a JS chart lib would add a dependency, a build step and a blank canvas on
+                  first paint for something the server can draw in the HTML.
+
+                  preserveAspectRatio="none" lets it stretch to any card width.
+                %>
+                <svg viewBox="0 0 100 34" preserveAspectRatio="none"
+                     style="width:100%; height:34px; display:block;" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="<%= gid %>" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stop-color="<%= stat[:color] %>" stop-opacity="0.20"/>
+                      <stop offset="100%" stop-color="<%= stat[:color] %>" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="<%= paths[:area] %>" fill="url(#<%= gid %>)"/>
+                  <path d="<%= paths[:line] %>" fill="none" stroke="<%= stat[:color] %>"
+                        stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                        vector-effect="non-scaling-stroke"/>
+                </svg>
+
+                <div class="flex items-center justify-between" style="margin-top:6px;">
+                  <span class="text-[10px] text-[#a1a4aa]"><%= @dates.first.strftime("%b %-d") %></span>
+                  <span class="text-[10px] text-[#a1a4aa]"><%= @dates.last.strftime("%b %-d") %></span>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <%# Honesty about the data — this prototype is going in front of real vendors. %>
+        <p class="text-[11px] text-[#a1a4aa]" style="margin-top:10px;">
+          Orders and revenue are drawn from your actual purchase orders.
+          Visits are sample data — analytics aren't wired up yet.
+        </p>
+
+      </div>
+    </div>
+  </div>
+</div>

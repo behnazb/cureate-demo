@@ -77,14 +77,34 @@
       <% end %>
     </nav>
 
+    <%# Identity + persona switch (E0). Mobile keeps it flat: both personas listed,
+        current one marked, tap to switch. No flyout needed in a drawer. %>
     <div class="px-5 py-4 border-t border-[#333]">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-full bg-[#363636] flex items-center justify-center text-[12px] font-bold text-white shrink-0">N</div>
-        <div>
-          <p class="text-[13px] font-bold text-white">Johns Hopkins University</p>
-          <p class="text-[11px] text-[#777]">buyer@jhu.edu</p>
-        </div>
-      </div>
+      <p class="text-[10px] font-bold uppercase tracking-wide text-[#777] mb-2.5">Prototype · view as</p>
+
+      <% Persona.all.each do |p| %>
+        <% active = p[:key] == current_persona_key %>
+        <%= link_to persona_path(persona: p[:key]),
+              data: { action: "click->mobile-nav#closeDrawer" },
+              class: "no-min-h flex items-center gap-3 -mx-2 px-2 py-2 rounded-md transition-colors #{active ? 'bg-[#2a2a2a]' : 'hover:bg-[#2a2a2a]'}" do %>
+
+          <% if p[:logo] %>
+            <img src="<%= p[:logo] %>" alt="" class="w-9 h-9 rounded-full object-cover shrink-0">
+          <% else %>
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold text-white shrink-0"
+                 style="background-color: <%= p[:avatar_bg] %>"><%= p[:initials] %></div>
+          <% end %>
+
+          <div class="min-w-0 flex-1">
+            <p class="text-[13px] font-bold <%= active ? 'text-white' : 'text-[#aaa]' %> truncate"><%= p[:org] %></p>
+            <p class="text-[11px] text-[#777] truncate"><%= p[:email] %></p>
+          </div>
+
+          <% if active %>
+            <span class="text-[10px] font-bold text-[#28ba93] shrink-0">Current</span>
+          <% end %>
+        <% end %>
+      <% end %>
     </div>
   </aside>
 </div>

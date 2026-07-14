@@ -1,0 +1,323 @@
+<% content_for :title, "Orders — 2Betties · Cureate Connect" %>
+<%
+  tabs = PurchaseOrder::VENDOR_TAB_DEFINITIONS
+  # Orders where the mobile app left a tracking code unentered ("Add Later").
+  # This is the vendor's action queue — see E3.
+  tracking_needed = @filtered.select { |po| po.tracking_needed?(@vendor.id) }
+%>
+
+<div class="flex flex-1 min-h-0 bg-white font-['Lato']">
+
+  <%= render "shared/sidebar" %>
+
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+    <%# ── Desktop header ─────────────────────────────────────────────────── %>
+    <div class="hidden md:flex items-center justify-between px-4 md:px-9 py-4 border-b border-[#e8e8e8] bg-white shrink-0">
+      <div class="flex items-center gap-5">
+        <h1 class="text-[20px] font-bold text-[#1f1f1f] whitespace-nowrap">Orders</h1>
+        <%= form_with(url: vendor_orders_path, method: :get, local: true,
+              class: "flex items-center gap-2 h-[38px] bg-white border rounded-full px-[10px] w-[320px] border-[#a1a4aa] hover:border-[#777] transition-all duration-200") do |f| %>
+          <%= hidden_field_tag :tab, @active_tab %>
+          <img src="/icons/icon_search.svg" alt="" class="w-[14px] h-[14px] shrink-0 opacity-60">
+          <%= text_field_tag :q, @search,
+                placeholder: "Search by PO number, buyer or location",
+                class: "flex-1 bg-transparent text-[13px] text-[#444955] placeholder-[#737780] outline-none" %>
+        <% end %>
+      </div>
+
+    </div>
+
+    <%#
+      ── Tabs + controls ─────────────────────────────────────────────────────
+      One row. Tabs (with counts) on the left; Filters + view toggle on the right.
+
+      The tracking alert used to be a full-width red banner above this row. It shouted
+      louder than the data and fought the status pills for attention. It's now a quiet
+      ⚠ on the Fulfillment tab — the tab that owns those orders — so the signal sits
+      exactly where the vendor would go to act on it, and stays silent otherwise.
+    %>
+    <div class="hidden md:flex items-center gap-1 px-4 md:px-9 py-3 border-b border-[#e8e8e8] bg-white shrink-0">
+      <% if @view == "table" %>
+        <div class="flex items-center gap-1 shrink-0">
+          <% tabs.each do |tab| %>
+            <%
+              active = tab[:value] == @active_tab
+              count  = @counts[tab[:value]].to_i
+              # The ⚠ rides the tab whose orders need the vendor's attention.
+              alert  = tab[:value] == "fulfillment" && tracking_needed.any?
+            %>
+            <%= link_to vendor_orders_path(request.query_parameters.merge(tab: tab[:value])),
+                title: (alert ? "#{pluralize(tracking_needed.size, 'order')} missing a tracking code" : nil),
+                class: "no-min-h px-4 h-[32px] rounded-full text-[12px] font-bold whitespace-nowrap flex items-center gap-1.5 transition-colors #{active ? 'bg-[#1f1f1f] text-white' : 'text-[#777] hover:text-[#1f1f1f] hover:bg-[#f0f0f0]'}" do %>
+              <span><%= tab[:label] %></span>
+              <% if count.positive? %>
+                <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full <%= active ? 'bg-white/20 text-white' : 'bg-[#e8e8e8] text-[#555]' %>"><%= count %></span>
+              <% end %>
+              <% if alert %>
+                <span class="text-[11px] leading-none" style="color:<%= active ? '#ff9b9b' : '#991b1b' %>;">⚠</span>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="ml-auto shrink-0 flex items-center gap-3">
+        <span class="text-[12px] text-[#777]"><%= pluralize(@orders.size, "order") %></span>
+
+        <%# Filters — same drawer component as the buyer's product filter. %>
+        <%= render "filter_drawer",
+              buyer_options:    @buyer_options,
+              location_options: @location_options,
+              buyer_filters:    @buyer_filters,
+              location_filters: @location_filters,
+              date_filter:      @date_filter,
+              group_by:         @group_by,
+              active_tab:       @active_tab,
+              search:           @search,
+              view:             @view,
+              active_count:     @active_filter_count %>
+
+        <%# View toggle — table / board %>
+        <div class="flex items-center overflow-hidden" style="border:1px solid #a1a4aa; border-radius:9999px; height:32px;">
+          <%= link_to vendor_orders_path(request.query_parameters.merge(view: "table")),
+              class: "no-min-h flex items-center justify-center transition-colors #{@view == 'table' ? 'text-white' : 'text-[#777] hover:bg-[#f0f0f0]'}",
+              style: "width:40px; height:32px;#{@view == 'table' ? ' background-color:#1f1f1f;' : ''}", title: "Table view" do %>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 3h12M1 7h12M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <% end %>
+          <%= link_to vendor_orders_path(request.query_parameters.merge(view: "board")),
+              class: "no-min-h flex items-center justify-center transition-colors #{@view == 'board' ? 'text-white' : 'text-[#777] hover:bg-[#f0f0f0]'}",
+              style: "width:40px; height:32px; border-left:1px solid #a1a4aa;#{@view == 'board' ? ' background-color:#1f1f1f;' : ''}", title: "Board view" do %>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1.5" width="3.4" height="11" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="5.3" y="1.5" width="3.4" height="7.5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9.6" y="1.5" width="3.4" height="9.5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <%# ── Desktop table ──────────────────────────────────────────────────── %>
+    <% if @view == "table" %>
+      <div class="hidden md:block flex-1 overflow-y-auto">
+        <% if @orders.empty? %>
+          <div class="px-4 md:px-9 py-20 text-center">
+            <p class="text-[14px] font-bold text-[#444955]">No orders found</p>
+            <p class="text-[12px] text-[#777] mt-1">
+              <%= @search.present? || @active_filter_count.positive? ? "Try adjusting your filters" : "No #{@tab_config[:label].downcase} orders" %>
+            </p>
+          </div>
+        <% else %>
+          <% groups = @group_by == "location" ? @location_groups : [[nil, @orders]] %>
+          <% groups.each do |location, orders| %>
+
+            <% if location %>
+              <div class="sticky top-0 z-10 flex items-center gap-2.5 px-4 md:px-9 py-2.5 bg-[#f7f5ef] border-b border-[#e8e8e8]">
+                <span class="text-[12px] font-bold text-[#1f1f1f]"><%= location %></span>
+                <span class="text-[11px] font-bold text-[#777] bg-white border border-[#e8e8e8] rounded-full px-2 py-0.5"><%= orders.size %></span>
+                <% if (addr = orders.first.delivery_address) %>
+                  <span class="text-[11px] text-[#777]"><%= addr %></span>
+                <% end %>
+              </div>
+            <% end %>
+
+            <%#
+              table-fixed + an explicit colgroup.
+
+              Without these the browser auto-sizes columns to whatever each tab happens
+              to contain, so the grid visibly shifted as you moved between Requested /
+              Confirmed / Fulfillment. Now every tab lays out identically: the columns
+              are declared once, not inferred from the rows.
+            %>
+            <%#
+              LAYOUT-CRITICAL RULES ARE INLINE, ON PURPOSE.
+
+              `table-fixed` was a Tailwind class, and Tailwind only emits classes it
+              finds when the CSS is rebuilt. Until someone ran `npm run build` the class
+              didn't exist in the stylesheet, the browser silently ignored the colgroup,
+              fell back to auto-layout, and sized every column to whatever the current
+              tab happened to contain — which is exactly the drift being chased here.
+
+              `table-layout: fixed` is what makes the colgroup binding. It must not be
+              able to go missing, so it doesn't live in a build artifact.
+            %>
+            <table style="width:100%; table-layout:fixed;">
+              <%# Columns with a KNOWN maximum are pinned in px; only Buyer and Location
+                  flex. Status is sized for "Tracking Needed", its longest label. %>
+              <colgroup>
+                <col style="width:185px">   <%# PO — fixed-format id %>
+                <col>                       <%# Buyer — flexes %>
+                <col>                       <%# Delivery location — flexes %>
+                <col style="width:140px">   <%# Delivery date — "Mar 18, 2026" %>
+                <col style="width:190px">   <%# Status — longest is "Tracking Needed" %>
+                <col style="width:130px">   <%# Your total %>
+              </colgroup>
+              <thead>
+                <tr class="border-b border-[#e8e8e8]">
+                  <th style="width:185px" class="text-left px-4 md:px-9 py-2.5 text-[11px] font-bold text-[#777] uppercase tracking-wide">PO</th>
+                  <th class="text-left px-4 py-2.5 text-[11px] font-bold text-[#777] uppercase tracking-wide">Buyer</th>
+                  <th class="text-left px-4 py-2.5 text-[11px] font-bold text-[#777] uppercase tracking-wide">Delivery location</th>
+                  <th style="width:140px" class="text-left px-4 py-2.5 text-[11px] font-bold text-[#777] uppercase tracking-wide">Delivery date</th>
+                  <th style="width:190px" class="text-left px-4 py-2.5 text-[11px] font-bold text-[#777] uppercase tracking-wide">Status</th>
+                  <th style="width:130px" class="text-right px-4 md:px-9 py-2.5 text-[11px] font-bold text-[#777] uppercase tracking-wide">Your total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% orders.each do |po| %>
+                  <%
+                    # One pill, always. Inside Fulfillment it names the fulfillment TYPE
+                    # (Delivery / Shipping / Tracking Needed) — never a second chip.
+                    status_label, status_style = vendor_row_status(po, @vendor.id)
+                  %>
+                  <tr data-controller="row-link"
+                      data-row-link-url-value="<%= vendor_order_path(po.id) %>"
+                      data-action="click->row-link#go"
+                      class="border-b border-[#f0f0f0] hover:bg-[#f7f5ef] cursor-pointer transition-colors">
+
+                    <%# `truncate` / `overflow-hidden` are also Tailwind classes, so the
+                        clipping is inline for the same reason the layout is: a column
+                        must never be able to widen itself because a build step lagged.
+                        No "new request" dot here either — it indented the PO column out
+                        of alignment with the other tabs. %>
+                    <td class="px-4 md:px-9 py-3.5" style="overflow:hidden;">
+                      <span class="text-[13px] font-bold text-[#28ba93]"
+                            style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><%= po.id %></span>
+                    </td>
+
+                    <td class="px-4 py-3.5" style="overflow:hidden;">
+                      <p class="text-[13px] text-[#1f1f1f]" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><%= po.buyer_org %></p>
+                      <% if po.buyer_contact %>
+                        <p class="text-[11px] text-[#777]" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><%= po.buyer_contact %></p>
+                      <% end %>
+                    </td>
+
+                    <td class="px-4 py-3.5" style="overflow:hidden;">
+                      <p class="text-[13px] text-[#1f1f1f]" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><%= po.delivery_location %></p>
+                      <p class="text-[11px] text-[#777]" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><%= po.delivery_address %></p>
+                    </td>
+
+                    <td class="px-4 py-3.5" style="overflow:hidden;">
+                      <span class="text-[13px] text-[#444955]" style="white-space:nowrap;"><%= format_delivery_date(po.delivery_date) %></span>
+                    </td>
+
+                    <td class="px-4 py-3.5" style="overflow:hidden;">
+                      <span class="text-[11px] font-bold"
+                            style="<%= status_style %>; display:inline-flex; align-items:center; white-space:nowrap; padding:4px 12px; border-radius:9999px;">
+                        <%= status_label %>
+                      </span>
+                    </td>
+
+                    <td class="px-4 md:px-9 py-3.5 text-right" style="overflow:hidden;">
+                      <span class="text-[14px] font-black text-[#1f1f1f]" style="white-space:nowrap;">$<%= format("%.2f", po.vendor_subtotal(@vendor.id)) %></span>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# ── Desktop board ──────────────────────────────────────────────────── %>
+    <% if @view == "board" %>
+      <div class="hidden md:flex flex-1 overflow-x-auto gap-4 px-4 md:px-9 py-6 bg-[#f7f5ef] items-start">
+        <% @board_columns.each do |col| %>
+          <div class="shrink-0 w-[270px] flex flex-col">
+            <div class="flex items-center gap-2 px-1 mb-3">
+              <span class="text-[12px] font-bold text-[#444955]"><%= col[:label] %></span>
+              <span class="text-[11px] font-bold text-[#777] bg-white border border-[#e8e8e8] rounded-full px-2 py-0.5"><%= col[:pos].size %></span>
+            </div>
+            <div class="flex flex-col gap-3">
+              <% col[:pos].each do |po| %>
+                <% card_label, card_style = vendor_row_status(po, @vendor.id) %>
+                <%= link_to vendor_order_path(po.id),
+                    class: "block bg-white border rounded-xl p-3.5 hover:shadow-md transition-all no-min-h #{po.tracking_needed?(@vendor.id) ? 'border-[#e6cfcf]' : 'border-[#e8e8e8] hover:border-[#d0d0d0]'}" do %>
+                  <p class="text-[13px] font-bold text-[#28ba93] mb-1.5"><%= po.id %></p>
+                  <p class="text-[12px] text-[#1f1f1f] font-bold leading-snug"><%= po.buyer_org %></p>
+                  <p class="text-[11px] text-[#777] mb-2.5"><%= po.delivery_location %></p>
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] text-[#777]"><%= po.delivery_date_short %></span>
+                    <span class="text-[13px] font-black text-[#1f1f1f]">$<%= format("%.2f", po.vendor_subtotal(@vendor.id)) %></span>
+                  </div>
+                  <%# Board columns already name the status, so a card only earns a pill
+                      when it says something the column doesn't: the fulfillment type. %>
+                  <% if po.status == "Delivered" %>
+                    <div class="mt-2.5 pt-2.5 border-t border-[#f0f0f0]">
+                      <span class="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-bold"
+                            style="<%= card_style %>"><%= card_label %></span>
+                    </div>
+                  <% end %>
+                <% end %>
+              <% end %>
+              <% if col[:pos].empty? %>
+                <div class="border border-dashed border-[#e0ddd5] rounded-xl py-6 text-center">
+                  <span class="text-[11px] text-[#a1a4aa]">None</span>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# ── Mobile card list ───────────────────────────────────────────────── %>
+    <div class="block md:hidden flex-1 overflow-y-auto">
+
+      <div class="px-4 pt-4 pb-2">
+        <h1 class="text-[20px] font-bold text-[#1f1f1f]">Orders</h1>
+      </div>
+
+      <%# Same passive treatment as desktop: the ⚠ rides the Fulfillment tab rather
+          than occupying a banner above the list. %>
+      <div class="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto scrollbar-none">
+        <% tabs.each do |tab| %>
+          <%
+            active = tab[:value] == @active_tab
+            count  = @counts[tab[:value]].to_i
+            alert  = tab[:value] == "fulfillment" && tracking_needed.any?
+          %>
+          <%= link_to vendor_orders_path(tab: tab[:value]),
+              class: "no-min-h h-[34px] px-3 text-[12px] font-bold rounded-full whitespace-nowrap flex items-center gap-1.5 shrink-0 transition-colors #{active ? 'bg-[#1f1f1f] text-white' : 'text-[#777] border border-[#e0e0e0]'}" do %>
+            <span><%= tab[:label] %></span>
+            <% if count.positive? %>
+              <span class="text-[10px] font-black"><%= count %></span>
+            <% end %>
+            <% if alert %>
+              <span class="text-[11px] leading-none" style="color:<%= active ? '#ff9b9b' : '#991b1b' %>;">⚠</span>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="pb-4">
+        <% @orders.each do |po| %>
+          <% m_label, m_style = vendor_row_status(po, @vendor.id) %>
+          <%= link_to vendor_order_path(po.id),
+              class: "block mx-4 mb-3 bg-white border border-[#e8e8e8] rounded-xl p-4 active:bg-[#f7f5ef] transition-colors no-min-h" do %>
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-[14px] font-bold text-[#28ba93]"><%= po.id %></span>
+              <%# One pill — inside Fulfillment it names the type (Delivery / Shipping /
+                  Tracking Needed) rather than repeating the tab. %>
+              <span class="inline-flex items-center whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-bold"
+                    style="<%= m_style %>">
+                <%= m_label %>
+              </span>
+            </div>
+            <p class="text-[13px] font-bold text-[#1f1f1f]"><%= po.buyer_org %></p>
+            <p class="text-[11px] text-[#777] mb-2"><%= po.delivery_location %></p>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] text-[#777]"><%= format_delivery_date(po.delivery_date) %></span>
+              <span class="text-[16px] font-black text-[#1f1f1f]">$<%= format("%.2f", po.vendor_subtotal(@vendor.id)) %></span>
+            </div>
+          <% end %>
+        <% end %>
+
+        <% if @orders.empty? %>
+          <div class="px-4 py-16 text-center">
+            <p class="text-[14px] font-bold text-[#444955]">No orders found</p>
+            <p class="text-[12px] text-[#777] mt-1">No <%= @tab_config[:label].downcase %> orders</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+  </div>
+</div>

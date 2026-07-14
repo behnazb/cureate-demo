@@ -23,12 +23,7 @@
     </nav>
   </div>
 
-  <%# User identity block — replace with current_user.organization in your production app %>
-  <div class="flex items-center gap-2 px-3 pb-1">
-    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 bg-[#28ba93]">JH</div>
-    <div class="flex flex-col min-w-0">
-      <span class="text-white text-xs font-bold leading-tight truncate">Johns Hopkins University</span>
-      <span class="text-white text-[10px] opacity-60 truncate">buyer@jhu.edu</span>
-    </div>
-  </div>
+  <%# Identity block — in production this is the signed-in user + auth menu.
+      In the prototype it's the persona switch (E0). Click to flip Buyer ⇄ Vendor. %>
+  <%= render "shared/persona_switcher" %>
 </aside>

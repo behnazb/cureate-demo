@@ -17,6 +17,7 @@ class Vendor
     delivery_days preferred_delivery_day
     logo about story owned goals order_rules products social_links
     insurance health_clearance production seasonal_offerings growth_goals
+    email remit_to
   ].freeze
   attr_accessor(*ATTRS)
 

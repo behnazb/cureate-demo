@@ -1,0 +1,374 @@
+<% content_for :title, "#{@po.id} — 2Betties · Cureate Connect" %>
+<%
+  f          = @fulfillment || {}
+  shipping   = @po.shipping?(@vendor.id)
+  truck      = @po.truck_delivery?(@vendor.id)
+  needs_tn   = @po.tracking_needed?(@vendor.id)
+  tracking   = @po.tracking_number(@vendor.id)
+  photo      = @po.proof_photo(@vendor.id)
+  acceptance = @po.buyer_acceptance(@vendor.id)
+  fulfilled  = @po.status == "Delivered"
+
+  # Same card + label treatment as the buyer's PO detail page (purchase_orders/show),
+  # so the two views of the same object don't look like two different products.
+  card_class  = "bg-white border border-[#e8e8e8] rounded-xl shadow-[2px_2px_10px_0px_rgba(156,153,153,0.25)]"
+  label_class = "text-[11px] font-bold text-[#777] uppercase tracking-wide"
+%>
+
+<div class="flex flex-1 min-h-0 bg-white font-['Lato']" data-controller="proof-photo">
+
+  <%= render "shared/sidebar" %>
+
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+    <%# ── Header ─────────────────────────────────────────────────────────── %>
+    <div class="flex items-center justify-between px-4 md:px-9 py-4 border-b border-[#e8e8e8] bg-white shrink-0">
+      <div class="flex items-center gap-3 min-w-0">
+        <%#
+          Goes BACK, not to a hardcoded screen. back_controller walks the browser history
+          when there's same-origin history to walk; the href is only the fallback for a
+          cold load, and it points at the Orders tab that actually contains this order
+          rather than always dumping the vendor on "Requested".
+        %>
+        <%= link_to vendor_orders_path(tab: vendor_tab_value_for(@po.status)),
+            title: "Back",
+            data: { controller: "back", action: "click->back#go" },
+            class: "no-min-h shrink-0 w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#f0f0f0] transition-colors" do %>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 3L5 8l5 5" stroke="#1f1f1f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        <% end %>
+        <h1 class="text-[16px] md:text-[20px] font-bold text-[#1f1f1f] truncate"><%= @po.id %></h1>
+        <%# Same three-state pill as the list: a fulfilled order shows its type
+            (Delivery / Shipping / Tracking Needed), not the word "Fulfillment". %>
+        <% hdr_label, hdr_style = vendor_row_status(@po, @vendor.id) %>
+        <span class="inline-flex items-center whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-bold shrink-0"
+              style="<%= hdr_style %>">
+          <%= hdr_label %>
+        </span>
+      </div>
+    </div>
+
+    <%# Flash — transition succeeded, or was refused by a guard %>
+    <% if flash[:notice] %>
+      <div class="px-4 md:px-9 py-2.5 border-b border-[#d4f5e9]" style="background-color:#f0fbf7;">
+        <%# Brand checkmark asset via the .icon-check mask, not a typed glyph. %>
+        <p class="text-[12px] font-bold flex items-center gap-1.5" style="color:#065f46;">
+          <span class="icon-check w-3 h-3 shrink-0"></span>
+          <%= flash[:notice] %>
+        </p>
+      </div>
+    <% end %>
+    <% if flash[:alert] %>
+      <div class="px-4 md:px-9 py-2.5 border-b border-[#f0dede]" style="background-color:#fdf5f5;">
+        <p class="text-[12px] font-bold" style="color:#991b1b;">⚠ <%= flash[:alert] %></p>
+      </div>
+    <% end %>
+
+    <div class="flex-1 overflow-y-auto bg-[#f7f5ef]">
+      <div class="px-4 md:px-9 py-4 md:py-6 flex flex-col gap-6">
+
+        <%# What the vendor can DO right now — exactly one action, first thing on the
+            page. Confirm → fulfil → invoice. %>
+        <%= render "actions", po: @po, vendor: @vendor %>
+
+        <%#
+          ── DELIVERY PANEL (E3) ────────────────────────────────────────────
+          Everything in this panel except the tracking number was captured in the
+          MOBILE INGESTION APP by the floor team and the driver. The vendor is
+          reading what already happened, not entering it. The one exception is the
+          tracking code, which the app lets the driver defer with "Add Later".
+        %>
+        <% if fulfilled %>
+          <div class="<%= card_class %> overflow-hidden">
+
+            <div class="flex items-center justify-between px-5 py-3.5 border-b border-[#f0f0f0]">
+              <div class="flex items-center gap-2.5">
+                <h2 class="text-[14px] font-bold text-[#1f1f1f]">Delivery</h2>
+                <span class="text-[11px] text-[#a1a4aa]">Captured in the Cureate mobile app</span>
+              </div>
+              <%= buyer_acceptance_chip(acceptance) %>
+            </div>
+
+            <div class="flex flex-col md:flex-row">
+
+              <%# ── Left: the facts from the ingestion app ── %>
+              <div class="flex-1 p-5 flex flex-col gap-4">
+
+                <%# No status pill here — the page header already carries it (Delivery /
+                    Shipping / Tracking Needed). These chips add what it doesn't say. %>
+                <div class="flex flex-wrap items-center gap-2">
+                  <% if f[:handling] %><%= handling_chip(f[:handling]) %><% end %>
+                  <% if f[:parcels] %>
+                    <span class="inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#f4f4f4] text-[#555]">
+                      <%= pluralize(f[:parcels], "parcel") %>
+                    </span>
+                  <% end %>
+                </div>
+
+                <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+                  <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wide text-[#a1a4aa] mb-0.5">Delivered to</p>
+                    <p class="text-[13px] font-bold text-[#1f1f1f]"><%= @po.delivery_location %></p>
+                    <p class="text-[11px] text-[#777]"><%= @po.delivery_address %></p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wide text-[#a1a4aa] mb-0.5">Delivery date</p>
+                    <p class="text-[13px] text-[#1f1f1f]"><%= format_delivery_date(@po.delivery_date) %></p>
+                  </div>
+                </div>
+
+                <%#
+                  ── Tracking (SHIPPING ONLY) ───────────────────────────────
+                  A shipped parcel has no Cureate driver, so there is no photo. The
+                  carrier's tracking number IS the proof. Two states, matching the
+                  mobile app's own cards exactly.
+                %>
+                <% if shipping %>
+                  <div class="pt-4 border-t border-[#f0f0f0]">
+                    <div class="flex items-center gap-2 mb-2.5">
+                      <p class="text-[10px] font-bold uppercase tracking-wide text-[#a1a4aa]">Tracking</p>
+                      <% if f[:carrier] %>
+                        <span class="text-[11px] font-bold text-[#444955]"><%= f[:carrier] %></span>
+                      <% end %>
+                    </div>
+
+                    <% if needs_tn %>
+                      <%#
+                        THE DEFERRED STATE. The driver tapped "Add Later" in the mobile
+                        app. This is the reason the vendor dashboard has a write at all.
+                      %>
+                      <div class="rounded-lg border border-[#f0dede] p-3.5" style="background-color:#fdf5f5;">
+                        <div class="flex items-center gap-2 mb-1">
+                          <%= warning_chip("Tracking code needed") %>
+                        </div>
+                        <p class="text-[12px] text-[#777] mb-3">
+                          Marked <span class="font-bold">“Add later”</span> at pickup.
+                          <%= @po.buyer_org %> can’t see where the parcels are until you add it.
+                        </p>
+
+                        <%= form_with(url: tracking_vendor_order_path(@po.id), method: :patch, local: true,
+                              class: "flex flex-col sm:flex-row gap-2") do %>
+                          <%= text_field_tag :tracking, nil,
+                                placeholder: "e.g. 1Z999AA10123456784",
+                                autocomplete: "off",
+                                class: "flex-1 h-[38px] rounded-full border border-[#a1a4aa] px-3.5 text-[13px] text-[#444955] bg-white outline-none focus:border-[#1f1f1f] transition-colors" %>
+                          <%= submit_tag "Save tracking number",
+                                class: "no-min-h bg-[#28ba93] text-white text-[13px] font-bold rounded-full px-4 h-[38px] hover:bg-[#22a882] transition-colors cursor-pointer shrink-0" %>
+                        <% end %>
+                      </div>
+
+                    <% else %>
+                      <%# Tracking present — from the driver's phone, or added here. %>
+                      <div class="flex flex-wrap items-center gap-2.5" data-controller="disclose">
+                        <%= success_chip("Tracking added") %>
+                        <span class="text-[13px] font-mono text-[#1f1f1f]"><%= tracking %></span>
+
+                        <% if f[:tracking_updated_by] %>
+                          <span class="text-[11px] text-[#a1a4aa]">
+                            Updated by <%= f[:tracking_updated_by] %> · <%= f[:tracking_updated_at] %>
+                          </span>
+                        <% end %>
+
+                        <%# Vendor admins can correct a typo — the mobile app offers no edit. %>
+                        <%# Editing dies at the invoice. Money has been asked for; the
+                            record behind it stops moving. %>
+                        <% unless @po.vendor_locked? %>
+                          <button type="button" data-action="disclose#toggle"
+                                  class="no-min-h text-[11px] font-bold text-[#777] hover:text-[#1f1f1f] underline transition-colors">
+                            Edit
+                          </button>
+                        <% end %>
+
+                        <div data-disclose-target="body" class="hidden w-full pt-2">
+                          <%= form_with(url: tracking_vendor_order_path(@po.id), method: :patch, local: true,
+                                class: "flex flex-col sm:flex-row gap-2") do %>
+                            <%= text_field_tag :tracking, tracking,
+                                  autocomplete: "off",
+                                  class: "flex-1 h-[38px] rounded-full border border-[#a1a4aa] px-3.5 text-[13px] text-[#444955] bg-white outline-none focus:border-[#1f1f1f] transition-colors" %>
+                            <%= submit_tag "Update",
+                                  class: "no-min-h bg-[#1f1f1f] text-white text-[13px] font-bold rounded-full px-4 h-[38px] hover:bg-[#363636] transition-colors cursor-pointer shrink-0" %>
+                          <% end %>
+                        </div>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+
+                <%# ── Issue reported (storyboard 8a) ── %>
+                <% if acceptance == :issue %>
+                  <div class="pt-4 border-t border-[#f0f0f0]">
+                    <div class="rounded-lg border border-[#f0dede] p-3.5" style="background-color:#fdf5f5;">
+                      <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[12px] font-bold" style="color:#991b1b;">Delivery issue found</span>
+                        <% if (t = @po.issue_ticket(@vendor.id)) %>
+                          <span class="text-[11px] font-mono text-[#777]"><%= t %></span>
+                        <% end %>
+                      </div>
+                      <p class="text-[12px] text-[#444955]"><%= f[:issue_note] %></p>
+                      <p class="text-[11px] text-[#777] mt-2">
+                        Cureate is triaging this with <%= @po.buyer_org %>. No action needed from you yet.
+                      </p>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+
+              <%#
+                ── Right: proof of delivery (TRUCK ONLY) ────────────────────
+                The driver photographs the drop-off in the mobile app. The vendor
+                views it; they never upload. Shipping orders get no photo slot at
+                all — an empty frame would imply a photo is coming that never will.
+              %>
+              <% if truck && photo %>
+                <div class="md:w-[300px] shrink-0 border-t md:border-t-0 md:border-l border-[#f0f0f0] p-5">
+                  <p class="text-[10px] font-bold uppercase tracking-wide text-[#a1a4aa] mb-2.5">Proof of delivery</p>
+
+                  <button type="button" data-action="proof-photo#open"
+                          class="no-min-h block w-full rounded-lg overflow-hidden border border-[#e8e8e8] hover:border-[#1f1f1f] transition-colors group relative">
+                    <img src="<%= photo %>" alt="Proof of delivery"
+                         class="w-full h-[170px] object-cover group-hover:opacity-95 transition-opacity">
+                    <span class="absolute bottom-2 right-2 text-[10px] font-bold text-white bg-black/55 rounded-full px-2 py-1">
+                      Expand
+                    </span>
+                  </button>
+
+                  <p class="text-[11px] text-[#444955] mt-2.5"><%= f[:proof_captured_at] %></p>
+                  <p class="text-[11px] text-[#777]"><%= f[:proof_captured_by] %></p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <%#
+          ── ORDER PANEL (E1c) ──────────────────────────────────────────────
+          The buyer's show page inverted. One buyer, 2Betties' SKUs only, 2Betties'
+          subtotal. The buyer's other vendors and Cureate's 10% processing fee are
+          deliberately absent — none of the vendor's business (D2).
+        %>
+        <div class="<%= card_class %> p-5">
+
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-[18px] font-normal text-[#1f1f1f]">Order</h2>
+            <span class="text-[11px] text-[#777]">Ordered <%= format_delivery_date(@po.created_at) %></span>
+          </div>
+
+          <%# Meta block — the buyer page's #fafafa inset panel, same treatment. %>
+          <div class="bg-[#fafafa] rounded-xl p-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3">
+            <div>
+              <p class="<%= label_class %> mb-1">Buyer</p>
+              <p class="text-[13px] font-bold text-[#444955]"><%= @po.buyer_org %></p>
+              <% if @po.buyer_contact %>
+                <p class="text-[11px] text-[#777]"><%= @po.buyer_contact %></p>
+              <% end %>
+            </div>
+            <div>
+              <p class="<%= label_class %> mb-1">Delivery Location</p>
+              <p class="text-[13px] font-bold text-[#444955]"><%= @po.delivery_location %></p>
+              <p class="text-[11px] text-[#777]"><%= @po.delivery_address %></p>
+            </div>
+            <div>
+              <p class="<%= label_class %> mb-1">Delivery Date</p>
+              <p class="text-[13px] font-bold text-[#444955]"><%= format_delivery_date(@po.delivery_date) %></p>
+            </div>
+            <div>
+              <p class="<%= label_class %> mb-1">Cureator</p>
+              <p class="text-[13px] font-bold text-[#444955]"><%= @po.cureator_name %></p>
+            </div>
+          </div>
+
+          <%# Product table — the buyer page's treatment, verbatim: a bordered rounded box
+              inset by the card's p-5, with a #fafafa header row. %>
+          <%#
+            The column geometry is INLINE. `grid-cols-[2.5fr_1fr_1fr_1fr]` is an arbitrary
+            Tailwind class that only exists after a rebuild — without it the grid silently
+            became a block and every cell stacked vertically. Only the `hidden`/`md:block`
+            toggle stays a class, since those have been compiled since the buyer build.
+
+            minmax(0,1fr) on the numeric columns so a long product name can't push them.
+          %>
+          <% row_grid = "display:grid; grid-template-columns:2.5fr repeat(3, minmax(0,1fr)); align-items:start;" %>
+
+          <div class="border border-[#e8e8e8] rounded-xl overflow-hidden">
+
+            <div class="hidden md:block px-4 py-2.5 bg-[#fafafa] border-b border-[#e8e8e8]">
+              <div style="<%= row_grid %>">
+                <% ["Product", "Quantity", "Unit Price", "Extended Cost"].each do |h| %>
+                  <p class="text-[11px] font-bold text-[#777] uppercase tracking-wide"><%= h %></p>
+                <% end %>
+              </div>
+            </div>
+
+            <% @items.each do |li| %>
+              <% next unless li.product %>
+              <div class="border-t border-[#f0f0f0] first:border-0">
+
+                <div class="hidden md:block px-4 py-3.5">
+                  <div style="<%= row_grid %>">
+                    <div class="flex items-start gap-3" style="padding-right:16px; min-width:0;">
+                      <%# Square, 4px corners — matches the product gallery card, which is
+                          where a vendor first meets these images. object-contain +
+                          mix-blend-multiply is the gallery's treatment too: the packaging
+                          sits ON the beige rather than being cropped by a circle. %>
+                      <div class="bg-[#f7f5ef] flex items-center justify-center overflow-hidden border border-[#e8e8e8] shrink-0"
+                           style="width:50px; height:50px; border-radius:4px; padding:4px;">
+                        <%= render "shared/product_image", product: li.product, size: :thumb %>
+                      </div>
+                      <div style="min-width:0;">
+                        <p class="text-[13px] font-bold text-[#444955]"><%= li.product.name %></p>
+                        <p class="text-[11px] text-[#999] mt-0.5">
+                          ID #<%= li.product.id %><%= " · UPC: #{li.product.upc}" if li.product.upc %>
+                        </p>
+                        <% if li.order_note.present? %>
+                          <p class="text-[11px] text-[#777] italic mt-1.5">&ldquo;<%= li.order_note %>&rdquo;</p>
+                        <% end %>
+                      </div>
+                    </div>
+                    <p class="text-[13px] text-[#444955]" style="padding-top:2px;"><%= li.quantity %> <%= li.unit %></p>
+                    <p class="text-[13px] text-[#444955]" style="padding-top:2px;">$<%= format("%.2f", li.unit_price.to_f) %></p>
+                    <p class="text-[13px] font-bold text-[#1f1f1f]" style="padding-top:2px;">$<%= format("%.2f", li.extended_cost) %></p>
+                  </div>
+                </div>
+
+                <div class="md:hidden px-4 py-3.5">
+                  <p class="text-[13px] font-bold text-[#444955] mb-1"><%= li.product.name %></p>
+                  <p class="text-[11px] text-[#999] mb-1">
+                    <%= li.quantity %> <%= li.unit %> · $<%= format("%.2f", li.unit_price.to_f) %>/unit
+                  </p>
+                  <p class="text-[13px] font-bold text-[#1f1f1f]">$<%= format("%.2f", li.extended_cost) %></p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <%# Vendor's own subtotal. No Cureate processing fee — that's the buyer's line (D2). %>
+          <div class="flex items-center justify-between px-4 py-4 mt-4 bg-[#fafafa] rounded-xl">
+            <span class="text-[13px] font-bold text-[#444955]">Your Total</span>
+            <span class="text-[20px] font-black text-[#1f1f1f]">$<%= format("%.2f", @subtotal) %></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <%# ── Proof photo lightbox ──────────────────────────────────────────────── %>
+  <% if truck && photo %>
+    <div data-proof-photo-target="lightbox"
+         data-action="click->proof-photo#close"
+         class="hidden fixed inset-0 z-[100] bg-black/80 items-center justify-center p-6">
+      <div class="max-w-[900px] w-full">
+        <img src="<%= photo %>" alt="Proof of delivery" class="w-full rounded-xl">
+        <div class="flex items-center justify-between mt-3">
+          <div>
+            <p class="text-[13px] font-bold text-white"><%= @po.delivery_location %></p>
+            <p class="text-[11px] text-white/70"><%= f[:proof_captured_at] %> · <%= f[:proof_captured_by] %></p>
+          </div>
+          <button type="button" data-action="proof-photo#close"
+                  class="no-min-h text-[12px] font-bold text-white/80 hover:text-white transition-colors">Close</button>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -37,6 +37,17 @@ twobetties = Vendor.new(
     min_cases: 1, units_per_case: 36, min_units: 36, mix_and_match: true,
     mix_and_match_note: "Minimum 1 case (36 units) required. Flavors are interchangeable to meet the minimum.",
   },
+  email: "hello@2betties.com",
+  # No Stripe yet, so the invoice carries payment instructions instead of a pay button.
+  # This is the bit to replace when the integration lands.
+  remit_to: {
+    method: "ACH / Wire transfer",
+    bank: "M&T Bank",
+    account_name: "2Betties LLC",
+    account: "•••• 4417",
+    routing: "052000113",
+    terms: "Net 30",
+  },
 )
 
 twobetties_flavors = [
@@ -44,7 +55,9 @@ twobetties_flavors = [
   { id: "16821", name: "Bites (2-pack) - Chocolate Chunk",  upc: "861513000433", image: "/vendors/2betties/chocolate-chunk.png" },
   { id: "16822", name: "Bites (2-pack) - Lemon",            upc: "850004178201", image: "/products/2betties/2betties-lemon.png" },
   { id: "16823", name: "Bites (2-pack) - Maple Cinnamon",   upc: "861513000419", image: "/vendors/2betties/maple-cinnamon.png" },
-  { id: "16824", name: "Bites (2-pack) - Sweet Almond",     upc: "850004178010", image: "/vendors/2betties/sweet-almond.png" },
+  # NO IMAGE — the realistic launch case. Most vendors onboard without product photos,
+  # so the empty state must be a first-class citizen, not an edge case.
+  { id: "16824", name: "Bites (2-pack) - Sweet Almond",     upc: "850004178010", image: nil },
 ]
 twobetties.products = twobetties_flavors.map { |f|
   Product.new(
@@ -54,6 +67,10 @@ twobetties.products = twobetties_flavors.map { |f|
     wholesale_case_price: 68.20, case_minimum: 1, unit_label: "unit",
     units_per_item: 12, item_label: "2-pack",   # 1 click = one 2-pack = 12 units; case = 3 two-packs
     storage: "Dry/Ambient: 7-12 months",
+    # Inventory is a number the vendor maintains — deliberately NOT wired into the order
+    # lifecycle (confirming an order doesn't check or decrement it). See app/models/product.rb.
+    inventory: { "16820" => 1240, "16821" => 860, "16822" => 42, "16823" => 0, "16824" => 610 }[f[:id]] || 300,
+    status: "published",
     allergens: %w[Dairy-Free Gluten-Free Peanut-Free Soy-Free Egg-Free],
     dietary: ["Paleo", "Low-Fat", "Low-Carb", "Low-Sugar", "Low-Sodium"],
     category: "Snacks", image: f[:image], vendor: twobetties,
@@ -172,9 +189,43 @@ Vendor.all.concat([twobetties, ethiopian, open_seas])
 
 # ─── Purchase Orders ─────────────────────────────────────────────────────────
 
+# Buyer organizations + delivery locations (E1, PRD story 2).
+#
+# The buyer prototype only ever showed one buyer (Johns Hopkins), because the buyer
+# never needs to be told who they are. The vendor does: 2Betties delivers to several
+# institutions, and "which buyer, which loading dock, which day" is the whole job.
+# These are real Baltimore institutions with real addresses so user-test sessions
+# don't get derailed by fake data.
+JHU_CHARLES = {
+  buyer_org: "Johns Hopkins University", buyer_contact: "Charles Ruiz",
+  delivery_location: "Charles Commons Dining",
+  delivery_address: "3301 N Charles St, Baltimore, MD 21218",
+}.freeze
+JHU_HOMEWOOD = {
+  buyer_org: "Johns Hopkins University", buyer_contact: "Stephanie Doyle",
+  delivery_location: "Homewood Campus — Levering Hall",
+  delivery_address: "3400 N Charles St, Baltimore, MD 21218",
+}.freeze
+MERCY = {
+  buyer_org: "Mercy Medical Center", buyer_contact: "Brenda Okafor",
+  delivery_location: "Main Campus Café",
+  delivery_address: "345 St Paul Pl, Baltimore, MD 21202",
+}.freeze
+CONVENTION = {
+  buyer_org: "Baltimore Convention Center", buyer_contact: "Marcus Webb",
+  delivery_location: "Pratt St Loading Dock",
+  delivery_address: "1 W Pratt St, Baltimore, MD 21201",
+}.freeze
+UNDER_ARMOUR = {
+  buyer_org: "Under Armour", buyer_contact: "Priya Raman",
+  delivery_location: "Port Covington HQ — Employee Café",
+  delivery_address: "1020 Hull St, Baltimore, MD 21230",
+}.freeze
+
 PurchaseOrder.all.concat([
   PurchaseOrder.new(
     id: "004-CHARLES-00017",
+    **JHU_CHARLES,
     date_range: { start: "04/01/2026", end: "04/15/2026" },
     status: "In Review", total: 650.56,
     cureator_name: "Cureate DMV", created_at: "2026-04-01",
@@ -196,6 +247,7 @@ PurchaseOrder.all.concat([
   ),
   PurchaseOrder.new(
     id: "005-BRENDA-00098",
+    **MERCY,
     date_range: { start: "03/22/2026", end: "03/28/2026" },
     status: "Confirmed", total: 274.00,
     cureator_name: "Cureate DMV", created_at: "2026-03-22",
@@ -207,6 +259,7 @@ PurchaseOrder.all.concat([
   ),
   PurchaseOrder.new(
     id: "006-STEPH-00001",
+    **JHU_HOMEWOOD,
     date_range: { start: "03/15/2026", end: "03/21/2026" },
     status: "Delivered", total: 889.00, fulfillment_method: "Delivery",
     # Per-vendor fulfillment: 2Betties ships (UPS + tracking); Ethiopian self-delivers.
@@ -225,6 +278,7 @@ PurchaseOrder.all.concat([
   ),
   PurchaseOrder.new(
     id: "007-MARKET-00001",
+    **CONVENTION,
     date_range: nil,
     status: "Draft", total: 29.68,
     cureator_name: "Cureate DMV", created_at: "2026-04-10",
@@ -235,6 +289,7 @@ PurchaseOrder.all.concat([
   ),
   PurchaseOrder.new(
     id: "003-CHARLES-00014",
+    **JHU_CHARLES,
     date_range: { start: "02/10/2026", end: "02/24/2026" },
     status: "Cancelled", total: 412.00,
     cureator_name: "Cureate DMV", created_at: "2026-02-10",
@@ -245,6 +300,7 @@ PurchaseOrder.all.concat([
   # ── Additional sample POs to populate the board across statuses ──────────────
   PurchaseOrder.new(
     id: "008-MARKET-00002",
+    **CONVENTION,
     date_range: { start: "05/01/2026", end: "05/13/2026" },
     status: "Processing", total: 341.00,
     cureator_name: "Cureate DMV", created_at: "2026-05-01",
@@ -256,6 +312,7 @@ PurchaseOrder.all.concat([
   ),
   PurchaseOrder.new(
     id: "009-CHARLES-00021",
+    **JHU_CHARLES,
     date_range: { start: "05/04/2026", end: "05/20/2026" },
     status: "Processing", total: 226.44,
     cureator_name: "Cureate DMV", created_at: "2026-05-04",
@@ -267,6 +324,7 @@ PurchaseOrder.all.concat([
   ),
   PurchaseOrder.new(
     id: "010-BRENDA-00102",
+    **MERCY,
     date_range: { start: "05/11/2026", end: "05/27/2026" },
     status: "Confirmed", total: 78.00,
     cureator_name: "Cureate DMV", created_at: "2026-05-11",
@@ -278,6 +336,7 @@ PurchaseOrder.all.concat([
   ),
   PurchaseOrder.new(
     id: "011-MARKET-00003",
+    **CONVENTION,
     date_range: { start: "06/01/2026", end: "06/17/2026" },
     status: "In Review", total: 204.60,
     cureator_name: "Cureate DMV", created_at: "2026-06-01",
@@ -289,8 +348,14 @@ PurchaseOrder.all.concat([
   ),
   PurchaseOrder.new(
     id: "002-STEPH-00007",
+    **JHU_HOMEWOOD,
     date_range: { start: "02/02/2026", end: "02/18/2026" },
     status: "Paid", total: 477.40,
+    # ── Invoice (E5). PRD story 7's five statuses are the life of the INVOICE, which
+    # begins where the order's life ends. Paid here drives PO.status = "Paid".
+    invoice_number: "INV-00007", invoice_status: "Paid",
+    invoiced_at: "2026-02-19", invoice_due_date: "2026-03-21",
+    invoice_sent_at: "2026-02-19", invoice_sent_to: ["stephanie.doyle@jhu.edu"],
     cureator_name: "Cureate DMV", created_at: "2026-02-02",
     delivery_date: "2026-02-18", delivery_date_short: "Feb 18",
     line_items: [
@@ -300,13 +365,330 @@ PurchaseOrder.all.concat([
   ),
   PurchaseOrder.new(
     id: "001-CHARLES-00009",
+    **JHU_CHARLES,
     date_range: { start: "01/14/2026", end: "01/28/2026" },
     status: "Invoiced", total: 377.40,
+    invoice_number: "INV-00009", invoice_status: "Approved",
+    invoiced_at: "2026-06-28", invoice_due_date: "2026-07-28",
+    invoice_sent_at: "2026-06-28", invoice_sent_to: ["charles.ruiz@jhu.edu"],
     cureator_name: "Cureate DMV", created_at: "2026-01-14",
     delivery_date: "2026-01-28", delivery_date_short: "Jan 28",
     line_items: [
       POLineItem.new(vendor_id: "ethiopian-delights", product_id: "10617", quantity: 5, unit: "cases",
                      unit_price: 75.48, delivery_schedule: "Delivered 01/28/2026"),
+    ],
+  ),
+
+  # ── 2Betties vendor pipeline (E0/E1) ────────────────────────────────────────
+  # The vendor persona needs every tab populated, with dates around "today"
+  # (July 2026) so Requested/Confirmed read as work still ahead of them rather
+  # than as a pile of overdue orders. Five buyers across five locations, so the
+  # buyer / location / date filters (PRD story 2) have something real to filter.
+
+  # Requested — new, unactioned. These carry the "New" highlight (PRD story 1).
+  PurchaseOrder.new(
+    id: "012-CHARLES-00024",
+    **JHU_CHARLES,
+    date_range: { start: "07/13/2026", end: "07/24/2026" },
+    status: "Processing", total: 750.20,
+    cureator_name: "Cureate DMV", created_at: "2026-07-10",
+    delivery_date: "2026-07-22", delivery_date_short: "Jul 22",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16820", quantity: 6, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Next delivery: 07/22/2026",
+                     order_note: "Fall semester move-in. Dock opens 6am."),
+      POLineItem.new(vendor_id: "2betties", product_id: "16824", quantity: 5, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Next delivery: 07/22/2026"),
+    ],
+  ),
+  PurchaseOrder.new(
+    id: "013-UA-00004",
+    **UNDER_ARMOUR,
+    date_range: { start: "07/13/2026", end: "07/29/2026" },
+    status: "Processing", total: 272.80,
+    cureator_name: "Cureate DMV", created_at: "2026-07-11",
+    delivery_date: "2026-07-29", delivery_date_short: "Jul 29",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16822", quantity: 4, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Next delivery: 07/29/2026",
+                     order_note: "Employee café restock — lemon is the favorite."),
+    ],
+  ),
+
+  # Confirmed — vendor has accepted; production is committed.
+  PurchaseOrder.new(
+    id: "014-BRENDA-00110",
+    **MERCY,
+    date_range: { start: "07/06/2026", end: "07/17/2026" },
+    status: "Confirmed", total: 545.60,
+    cureator_name: "Cureate DMV", created_at: "2026-07-02",
+    delivery_date: "2026-07-17", delivery_date_short: "Jul 17",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16821", quantity: 4, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Next delivery: 07/17/2026",
+                     order_note: "Staff appreciation week."),
+      POLineItem.new(vendor_id: "2betties", product_id: "16823", quantity: 4, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Next delivery: 07/17/2026"),
+    ],
+  ),
+  PurchaseOrder.new(
+    id: "015-MARKET-00008",
+    **CONVENTION,
+    date_range: { start: "07/06/2026", end: "07/15/2026" },
+    status: "Confirmed", total: 409.20,
+    cureator_name: "Cureate DMV", created_at: "2026-07-01",
+    delivery_date: "2026-07-15", delivery_date_short: "Jul 15",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16820", quantity: 3, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Next delivery: 07/15/2026",
+                     order_note: "Regional food expo — booth catering."),
+      POLineItem.new(vendor_id: "2betties", product_id: "16824", quantity: 3, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Next delivery: 07/15/2026"),
+    ],
+  ),
+
+  # ── Fulfillment (E3) ────────────────────────────────────────────────────────
+  # `fulfillment_by_vendor` is written by the MOBILE DATA-INGESTION APP, not here.
+  # These seeds reproduce the four states that app can leave an order in, because
+  # each one renders differently in the vendor dashboard:
+  #
+  #   016  Shipping + tracking entered      → ✓ Tracking added
+  #   017  Truck + driver photo + accepted  → proof photo, Delivery Received
+  #   020  Shipping, driver hit "Add Later" → ⚠ Tracking code needed  ← THE ACTION
+  #   021  Truck + photo + buyer flagged    → Delivery Issue Found (ticket open)
+
+  # Shipping, tracking already captured on the driver's phone.
+  PurchaseOrder.new(
+    id: "016-STEPH-00012",
+    **JHU_HOMEWOOD,
+    date_range: { start: "06/29/2026", end: "07/08/2026" },
+    status: "Delivered", total: 613.80, fulfillment_method: "Shipping",
+    fulfillment_by_vendor: {
+      "2betties" => {
+        method: "Shipping", handling: "Ambient", parcels: 9,
+        carrier: "UPS", tracking: "1Z999AA10987654321",
+        buyer_response: "accepted", buyer_responded_at: "Jul 8, 2026",
+      },
+    },
+    cureator_name: "Cureate DMV", created_at: "2026-06-26",
+    delivery_date: "2026-07-08", delivery_date_short: "Jul 8",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16822", quantity: 5, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Shipped 07/06/2026"),
+      POLineItem.new(vendor_id: "2betties", product_id: "16821", quantity: 4, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Shipped 07/06/2026"),
+    ],
+  ),
+
+  # Truck delivery — driver photographed the drop-off. Buyer stayed silent past 24h,
+  # which counts as acceptance.
+  PurchaseOrder.new(
+    id: "017-UA-00006",
+    **UNDER_ARMOUR,
+    date_range: { start: "06/29/2026", end: "07/10/2026" },
+    status: "Delivered", total: 204.60, fulfillment_method: "Delivery",
+    fulfillment_by_vendor: {
+      "2betties" => {
+        method: "Delivery", handling: "Ambient", parcels: 3,
+        proof_photo: "/delivery-proof.jpg",
+        proof_captured_at: "Jul 10, 2026 · 2:14 PM",
+        proof_captured_by: "Dev O. (driver)",
+        buyer_response: "silent", buyer_responded_at: "Jul 11, 2026",
+      },
+    },
+    cureator_name: "Cureate DMV", created_at: "2026-06-25",
+    delivery_date: "2026-07-10", delivery_date_short: "Jul 10",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16823", quantity: 3, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Delivered 07/10/2026"),
+    ],
+  ),
+
+  # ⚠ THE ONE THAT NEEDS THE VENDOR. Driver tapped "Add Later" in the mobile app —
+  # the parcels are with FedEx but nobody has entered the tracking code. This is the
+  # deferred state the dashboard exists to resolve.
+  PurchaseOrder.new(
+    id: "020-CHARLES-00026",
+    **JHU_CHARLES,
+    date_range: { start: "07/06/2026", end: "07/11/2026" },
+    status: "Delivered", total: 340.00, fulfillment_method: "Shipping",
+    fulfillment_by_vendor: {
+      "2betties" => {
+        method: "Shipping", handling: "Ambient", parcels: 6,
+        carrier: "FedEx", tracking: nil,   # ← "Add Later"
+      },
+    },
+    cureator_name: "Cureate DMV", created_at: "2026-07-03",
+    delivery_date: "2026-07-11", delivery_date_short: "Jul 11",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16824", quantity: 3, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Shipped 07/09/2026"),
+      POLineItem.new(vendor_id: "2betties", product_id: "16820", quantity: 2, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Shipped 07/09/2026"),
+    ],
+  ),
+
+  # ⚠ PROOF NEEDED. The vendor marked this for truck delivery, but the driver hasn't
+  # uploaded the drop-off photo yet. Unlike Tracking Needed, the VENDOR can't fix this
+  # one — only the driver can. It still blocks invoicing, which is why it's loud.
+  PurchaseOrder.new(
+    id: "022-UA-00009",
+    **UNDER_ARMOUR,
+    date_range: { start: "07/06/2026", end: "07/11/2026" },
+    status: "Delivered", total: 409.20, fulfillment_method: "Delivery",
+    fulfillment_by_vendor: {
+      "2betties" => {
+        method: "Delivery", handling: "Ambient", parcels: 6,
+        proof_photo: nil,   # ← driver hasn't captured it
+      },
+    },
+    cureator_name: "Cureate DMV", created_at: "2026-07-04",
+    delivery_date: "2026-07-11", delivery_date_short: "Jul 11",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16821", quantity: 6, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Out for delivery 07/11/2026"),
+    ],
+  ),
+
+  # Buyer flagged a problem inside the 24h window → ticket opened, Cureate triaging.
+  PurchaseOrder.new(
+    id: "021-BRENDA-00112",
+    **MERCY,
+    date_range: { start: "07/06/2026", end: "07/09/2026" },
+    status: "Delivered", total: 272.80, fulfillment_method: "Delivery",
+    fulfillment_by_vendor: {
+      "2betties" => {
+        method: "Delivery", handling: "Cold", parcels: 4,
+        proof_photo: "/delivery-proof.jpg",
+        proof_captured_at: "Jul 9, 2026 · 7:52 AM",
+        proof_captured_by: "Dev O. (driver)",
+        buyer_response: "issue", buyer_responded_at: "Jul 9, 2026",
+        issue_ticket: "TKT-3041",
+        issue_note: "Two cases arrived warm. Cold-chain check requested.",
+      },
+    },
+    cureator_name: "Cureate DMV", created_at: "2026-07-02",
+    delivery_date: "2026-07-09", delivery_date_short: "Jul 9",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16821", quantity: 4, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Delivered 07/09/2026"),
+    ],
+  ),
+
+  # Invoiced — billed / settled.
+  PurchaseOrder.new(
+    id: "018-BRENDA-00105",
+    **MERCY,
+    date_range: { start: "06/08/2026", end: "06/19/2026" },
+    status: "Invoiced", total: 477.40,
+    # OVERDUE — due June 30, unpaid, and today is July 12. Overdue is DERIVED from the due
+    # date, never stored: a stored flag is always one cron job away from lying.
+    invoice_number: "INV-00105", invoice_status: "Submitted",
+    invoiced_at: "2026-05-31", invoice_due_date: "2026-06-30",
+    invoice_sent_at: "2026-05-31", invoice_sent_to: ["brenda.okafor@mercy.com"],
+    invoice_memo: "Thanks again — please remit within terms.",
+    cureator_name: "Cureate DMV", created_at: "2026-06-05",
+    delivery_date: "2026-06-19", delivery_date_short: "Jun 19",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16820", quantity: 7, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Delivered 06/19/2026"),
+    ],
+  ),
+
+  # SUBMITTED — freshly issued, well inside terms. (The only other Submitted invoice,
+  # INV-00105, has aged past its due date and therefore DISPLAYS as Overdue.)
+  PurchaseOrder.new(
+    id: "025-CHARLES-00030",
+    **JHU_CHARLES,
+    date_range: { start: "06/29/2026", end: "07/06/2026" },
+    status: "Invoiced", total: 613.80, fulfillment_method: "Delivery",
+    fulfillment_by_vendor: {
+      "2betties" => {
+        method: "Delivery", handling: "Ambient", parcels: 9,
+        proof_photo: "/delivery-proof.jpg",
+        proof_captured_at: "Jul 6, 2026 · 7:40 AM", proof_captured_by: "Dev O. (driver)",
+        buyer_response: "accepted", buyer_responded_at: "Jul 6, 2026",
+      },
+    },
+    invoice_number: "INV-00030", invoice_status: "Submitted",
+    invoiced_at: "2026-07-08", invoice_due_date: "2026-08-07",
+    invoice_sent_at: "2026-07-08", invoice_sent_to: ["charles.ruiz@jhu.edu"],
+    cureator_name: "Cureate DMV", created_at: "2026-06-26",
+    delivery_date: "2026-07-06", delivery_date_short: "Jul 6",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16823", quantity: 5, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Delivered 07/06/2026"),
+      POLineItem.new(vendor_id: "2betties", product_id: "16820", quantity: 4, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Delivered 07/06/2026"),
+    ],
+  ),
+
+  # ── Invoices (E5) — the remaining PRD statuses, on 2Betties orders ──────────
+  # PRD story 7 names five: Submitted, Approved, Payment Pending, Paid, Overdue.
+  # Paid = 002, Overdue (derived) = 018. These two supply Approved and Payment Pending.
+  PurchaseOrder.new(
+    id: "023-UA-00011",
+    **UNDER_ARMOUR,
+    date_range: { start: "06/15/2026", end: "06/24/2026" },
+    status: "Invoiced", total: 545.60, fulfillment_method: "Delivery",
+    fulfillment_by_vendor: {
+      "2betties" => {
+        method: "Delivery", handling: "Ambient", parcels: 8,
+        proof_photo: "/delivery-proof.jpg",
+        proof_captured_at: "Jun 24, 2026 · 9:05 AM", proof_captured_by: "Dev O. (driver)",
+        buyer_response: "accepted", buyer_responded_at: "Jun 24, 2026",
+      },
+    },
+    invoice_number: "INV-00011", invoice_status: "Approved",
+    invoiced_at: "2026-06-25", invoice_due_date: "2026-07-25",
+    invoice_sent_at: "2026-06-25", invoice_sent_to: ["priya.raman@underarmour.com", "ap@underarmour.com"],
+    cureator_name: "Cureate DMV", created_at: "2026-06-12",
+    delivery_date: "2026-06-24", delivery_date_short: "Jun 24",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16820", quantity: 4, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Delivered 06/24/2026"),
+      POLineItem.new(vendor_id: "2betties", product_id: "16822", quantity: 4, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Delivered 06/24/2026"),
+    ],
+  ),
+  PurchaseOrder.new(
+    id: "024-MARKET-00012",
+    **CONVENTION,
+    date_range: { start: "06/22/2026", end: "07/01/2026" },
+    status: "Invoiced", total: 409.20, fulfillment_method: "Shipping",
+    fulfillment_by_vendor: {
+      "2betties" => {
+        method: "Shipping", handling: "Ambient", parcels: 6,
+        carrier: "UPS", tracking: "1Z999AA10555512345",
+        buyer_response: "silent", buyer_responded_at: "Jul 2, 2026",
+      },
+    },
+    invoice_number: "INV-00012", invoice_status: "Payment Pending",
+    invoiced_at: "2026-07-02", invoice_due_date: "2026-08-01",
+    invoice_sent_at: "2026-07-02", invoice_sent_to: ["marcus.webb@bccenter.org"],
+    invoice_memo: "Regional food expo — thanks for having us.",
+    cureator_name: "Cureate DMV", created_at: "2026-06-19",
+    delivery_date: "2026-07-01", delivery_date_short: "Jul 1",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16824", quantity: 3, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Shipped 06/29/2026"),
+      POLineItem.new(vendor_id: "2betties", product_id: "16821", quantity: 3, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Shipped 06/29/2026"),
+    ],
+  ),
+
+  # Cancelled — buyer pulled the order after it reached the vendor.
+  PurchaseOrder.new(
+    id: "019-MARKET-00005",
+    **CONVENTION,
+    date_range: { start: "06/15/2026", end: "06/26/2026" },
+    status: "Cancelled", total: 136.40,
+    cureator_name: "Cureate DMV", created_at: "2026-06-12",
+    delivery_date: "2026-06-26", delivery_date_short: "Jun 26",
+    line_items: [
+      POLineItem.new(vendor_id: "2betties", product_id: "16824", quantity: 2, unit: "cases",
+                     unit_price: 68.20, delivery_schedule: "Cancelled 06/18/2026",
+                     order_note: "Event postponed to fall."),
     ],
   ),
 ])

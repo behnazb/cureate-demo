@@ -1,0 +1,291 @@
+<%#
+  Add / edit product drawer (E4).
+
+  Same flyout as the buyer's cart drawer — fixed right, warm #f7f5ef canvas, slide-in —
+  and the content is organized with the same white section cards used on the order and PO
+  detail pages, so the form reads as the product's record rather than as a form.
+
+  Every field here is a field the BUYER already sees on the PDP. Nothing new is invented;
+  the vendor side simply makes them editable.
+
+  Three exits: Preview (see it as a buyer would), Save as Draft (private), Publish (live).
+
+  Locals: vendor, product (nil when adding)
+%>
+<%
+  editing = product.present?
+  url     = editing ? vendor_listing_path(product.id) : vendor_listings_path
+  method  = editing ? :patch : :post
+
+  # Locals only — a constant here would be a dynamic constant assignment (templates
+  # compile into methods), which is a hard SyntaxError at render time.
+  allergen_options = ["Dairy-Free", "Gluten-Free", "Peanut-Free", "Tree-Nut-Free",
+                      "Soy-Free", "Egg-Free", "Shellfish-Free", "Sesame-Free"]
+  dietary_options  = ["Paleo", "Low-Fat", "Low-Carb", "Low-Sugar", "Low-Sodium",
+                      "Vegan", "Vegetarian", "Keto", "High-Protein", "Organic / Naturally Grown"]
+  categories       = ["Snacks", "Beverages", "Prepared Foods", "Pantry", "Bakery", "Frozen"]
+
+  sel_allergens = Array(product&.allergens)
+  sel_dietary   = Array(product&.dietary)
+
+  section = "bg-white border border-[#e8e8e8] rounded-xl p-4"
+  label   = "text-[11px] font-bold text-[#777] uppercase tracking-wide"
+  field   = "w-full h-[38px] rounded-lg border border-[#a1a4aa] px-3 text-[13px] text-[#444955] bg-white outline-none focus:border-[#28ba93] transition-colors"
+%>
+
+<%# Backdrop %>
+<div data-product-drawer-target="backdrop"
+     data-action="click->product-drawer#close"
+     class="hidden fixed inset-0 bg-black/30 z-[70]"></div>
+
+<%# Panel — slide-in from the right, same as the cart drawer %>
+<div data-product-drawer-target="panel" data-open="false"
+     class="fixed top-0 right-0 h-full z-[80] overflow-hidden bg-[#f7f5ef] font-['Lato'] flex flex-col"
+     style="width:100%; max-width:640px; transform:translateX(100%); transition:transform 250ms ease;">
+
+  <%# data-open drives the slide — inline, so a stale build can't strand the drawer offscreen %>
+  <style>
+    [data-product-drawer-target="panel"][data-open="true"] { transform: translateX(0) !important; }
+  </style>
+
+  <%# Header %>
+  <div class="flex items-center justify-between px-5 py-4 border-b border-[#e8e8e8] bg-white shrink-0">
+    <div>
+      <h2 class="text-[18px] font-bold text-[#1f1f1f]"><%= editing ? "Edit product" : "Add new product" %></h2>
+      <p class="text-[11px] text-[#777] mt-0.5">
+        <%= editing ? "ID ##{product.id} · #{product.published? ? 'Live on the marketplace' : 'Draft'}" : "Buyers see everything you enter here." %>
+      </p>
+    </div>
+    <button type="button" data-action="product-drawer#close"
+            class="no-min-h w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#f0f0f0] transition-colors">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M1 1l12 12M13 1L1 13" stroke="#1f1f1f" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <%# ── Preview — the listing as a buyer would see it, from the CURRENT form values ── %>
+  <div data-product-drawer-target="preview" class="hidden px-5 pt-4 shrink-0">
+    <div class="bg-white border border-[#28ba93] rounded-xl overflow-hidden">
+      <div class="px-4 py-2 border-b border-[#e8e8e8]" style="background:#f0fbf7;">
+        <p class="text-[10px] font-bold uppercase tracking-wide" style="color:#065f46;">Buyer preview</p>
+      </div>
+      <div class="flex items-center gap-3 p-4">
+        <div class="bg-[#f7f5ef] flex items-center justify-center overflow-hidden border border-[#e8e8e8] shrink-0"
+             style="width:64px; height:64px; border-radius:4px; padding:5px;">
+          <img data-product-drawer-target="previewImage" src="<%= product&.image %>" alt=""
+               class="w-full h-full object-contain mix-blend-multiply">
+        </div>
+        <div style="min-width:0;">
+          <p data-product-drawer-target="previewName" class="text-[14px] font-bold text-[#1f1f1f]"><%= product&.name %></p>
+          <p data-product-drawer-target="previewPrice" class="text-[12px] text-[#777]"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%= form_with(url: url, method: method, local: true,
+        data: { product_drawer_target: "form" },
+        class: "flex-1 flex flex-col min-h-0") do %>
+
+    <%= hidden_field_tag :commit, "draft", data: { product_drawer_target: "commit" } %>
+    <%= hidden_field_tag :image, product&.image, data: { product_drawer_target: "imageData" } %>
+    <%= hidden_field_tag :downloads, (product&.downloads || []).to_json, data: { product_drawer_target: "docsData" } %>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4" style="display:flex; flex-direction:column; gap:14px;">
+
+      <%#
+        ── What's missing ──────────────────────────────────────────────────
+        The same nudge as the gallery, but here it's actionable in place: the vendor is
+        already inside the form that fixes it. Each line says why the gap costs an order.
+        Only shown when editing an existing listing — a blank new-product form is empty by
+        definition, and scolding someone for that would be absurd.
+      %>
+      <% if editing && product.listing_gaps.any? %>
+        <div class="rounded-xl border border-[#e8e8e8] p-4" style="background:#fffdf6;">
+          <div class="flex items-baseline justify-between mb-2.5">
+            <p class="<%= label %>">Strengthen this listing</p>
+            <% done, total = product.listing_score %>
+            <span class="text-[11px] text-[#a1a4aa]"><%= done %>/<%= total %> complete</span>
+          </div>
+          <% product.listing_gaps.each do |gap| %>
+            <div class="flex items-start" style="gap:8px; margin-bottom:6px;">
+              <span style="width:5px; height:5px; border-radius:9999px; background:#c4c4c4; margin-top:6px; flex-shrink:0;"></span>
+              <div style="min-width:0;">
+                <p class="text-[12px] font-bold text-[#444955]"><%= gap[:label] %></p>
+                <p class="text-[11px] text-[#a1a4aa]"><%= gap[:why] %></p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%# ── Image ─────────────────────────────────────────────────────────── %>
+      <div class="<%= section %>">
+        <p class="<%= label %> mb-2.5">Product image</p>
+        <div class="flex items-center gap-4">
+          <div class="bg-[#f7f5ef] flex items-center justify-center overflow-hidden border border-[#e8e8e8] shrink-0"
+               style="width:96px; height:96px; border-radius:4px; padding:8px;">
+            <img data-product-drawer-target="imagePreview"
+                 src="<%= product&.image %>" alt=""
+                 class="w-full h-full object-contain mix-blend-multiply <%= 'hidden' if product&.image.blank? %>">
+            <span data-product-drawer-target="imageEmpty"
+                  class="text-[10px] text-[#a1a4aa] text-center <%= 'hidden' if product&.image.present? %>">No image</span>
+          </div>
+          <div>
+            <button type="button" data-action="product-drawer#chooseImage"
+                    class="no-min-h h-[34px] px-4 rounded-full text-[12px] font-bold text-[#1f1f1f] border border-[#a1a4aa] hover:border-[#1f1f1f] transition-colors">
+              <%= product&.image.present? ? "Replace image" : "Upload image" %>
+            </button>
+            <p class="text-[11px] text-[#a1a4aa] mt-1.5">Square image on a plain background works best.</p>
+            <%= file_field_tag :image_file, accept: "image/*", class: "hidden",
+                  data: { product_drawer_target: "imageInput", action: "change->product-drawer#imageSelected" } %>
+          </div>
+        </div>
+      </div>
+
+      <%# ── Product details ───────────────────────────────────────────────── %>
+      <div class="<%= section %>">
+        <p class="<%= label %> mb-2.5">Product details</p>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div>
+            <p class="text-[11px] text-[#777] mb-1">Product name</p>
+            <%= text_field_tag :name, product&.name, required: true, placeholder: "Bites (2-pack) - Chocolate Chip", class: field %>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px;">
+            <div>
+              <p class="text-[11px] text-[#777] mb-1">UPC</p>
+              <%= text_field_tag :upc, product&.upc, placeholder: "850004178164", class: field %>
+            </div>
+            <div>
+              <p class="text-[11px] text-[#777] mb-1">Size</p>
+              <%= text_field_tag :size, product&.size, placeholder: "1.4 oz", class: field %>
+            </div>
+            <div>
+              <p class="text-[11px] text-[#777] mb-1">Category</p>
+              <%= select_tag :category, options_for_select(categories, product&.category),
+                    class: "#{field} cursor-pointer appearance-none" %>
+            </div>
+            <div>
+              <p class="text-[11px] text-[#777] mb-1">Inventory on hand (units)</p>
+              <%= number_field_tag :inventory, product&.inventory.to_i, min: 0, class: field %>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px;">
+            <div>
+              <p class="text-[11px] text-[#777] mb-1">Wholesale unit price</p>
+              <%= number_field_tag :wholesale_unit_price, product&.wholesale_unit_price, step: "0.01", min: 0, class: field %>
+            </div>
+            <div>
+              <p class="text-[11px] text-[#777] mb-1">MSRP</p>
+              <%= number_field_tag :msrp, product&.msrp, step: "0.01", min: 0, class: field %>
+            </div>
+            <div>
+              <p class="text-[11px] text-[#777] mb-1">Wholesale case price</p>
+              <%= number_field_tag :wholesale_case_price, product&.wholesale_case_price, step: "0.01", min: 0, class: field %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%# ── Minimum order quantity ────────────────────────────────────────── %>
+      <div class="<%= section %>">
+        <p class="<%= label %> mb-2.5">Minimum order quantity</p>
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px;">
+          <div>
+            <p class="text-[11px] text-[#777] mb-1">Units per case</p>
+            <%= number_field_tag :units_per_case, product&.units_per_case, min: 1, class: field %>
+          </div>
+          <div>
+            <p class="text-[11px] text-[#777] mb-1">Case minimum</p>
+            <%= number_field_tag :case_minimum, product&.case_minimum, min: 1, class: field %>
+          </div>
+        </div>
+        <p class="text-[11px] text-[#a1a4aa] mt-2">
+          This is the MOQ a buyer must meet before they can order. It drives the progress bar on the buyer's product page.
+        </p>
+      </div>
+
+      <%# ── Storage & shelf life ──────────────────────────────────────────── %>
+      <div class="<%= section %>">
+        <p class="<%= label %> mb-2.5">Storage &amp; shelf life</p>
+        <%= text_field_tag :storage, product&.storage, placeholder: "Dry/Ambient: 7-12 months", class: field %>
+      </div>
+
+      <%# ── Allergen-friendly ─────────────────────────────────────────────── %>
+      <div class="<%= section %>">
+        <p class="<%= label %> mb-2.5">Allergen-friendly</p>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <% allergen_options.each do |opt| %>
+            <% on = sel_allergens.include?(opt) %>
+            <label class="cursor-pointer">
+              <%= check_box_tag "allergens[]", opt, on, id: nil, class: "hidden",
+                    data: { action: "change->product-drawer#toggleTag" } %>
+              <span data-pill class="inline-flex items-center px-3 h-[30px] rounded-full text-[12px] font-bold border transition-colors"
+                    style="background:<%= on ? '#f0fbf7' : '#ffffff' %>; border-color:<%= on ? '#28ba93' : '#a1a4aa' %>; color:<%= on ? '#065f46' : '#444955' %>;">
+                <%= opt %>
+              </span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <%# ── Dietary preferences ───────────────────────────────────────────── %>
+      <div class="<%= section %>">
+        <p class="<%= label %> mb-2.5">Dietary preferences</p>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <% dietary_options.each do |opt| %>
+            <% on = sel_dietary.include?(opt) %>
+            <label class="cursor-pointer">
+              <%= check_box_tag "dietary[]", opt, on, id: nil, class: "hidden",
+                    data: { action: "change->product-drawer#toggleTag" } %>
+              <span data-pill class="inline-flex items-center px-3 h-[30px] rounded-full text-[12px] font-bold border transition-colors"
+                    style="background:<%= on ? '#f0fbf7' : '#ffffff' %>; border-color:<%= on ? '#28ba93' : '#a1a4aa' %>; color:<%= on ? '#065f46' : '#444955' %>;">
+                <%= opt %>
+              </span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <%# ── Downloadables ─────────────────────────────────────────────────── %>
+      <div class="<%= section %>">
+        <p class="<%= label %> mb-2.5">Downloadables</p>
+        <p class="text-[11px] text-[#a1a4aa] mb-2.5">Spec sheets, sell sheets, certificates. Buyers can download these from your product page.</p>
+        <div data-product-drawer-target="docsList"></div>
+        <%# Secondary button — borrows the plus, not the green. Title Case. %>
+        <button type="button" data-action="product-drawer#chooseDocs"
+                class="no-min-h inline-flex items-center gap-2 h-[34px] px-4 rounded-full text-[12px] font-bold text-[#1f1f1f] border border-[#a1a4aa] hover:border-[#1f1f1f] transition-colors">
+          <%= cta_plus_icon %>
+          Add File
+        </button>
+        <%= file_field_tag :docs_files, accept: ".pdf,.doc,.docx,.xlsx,.png,.jpg", multiple: true, class: "hidden",
+              data: { product_drawer_target: "docsInput", action: "change->product-drawer#docsSelected" } %>
+      </div>
+    </div>
+
+    <%#
+      ── Footer: the three exits ─────────────────────────────────────────────
+      Publish is the only green one. Draft and Preview are reversible; Publish puts the
+      listing in front of every buyer on the marketplace, so it's the only one that reads
+      as a commitment.
+    %>
+    <div class="shrink-0 px-5 py-4 border-t border-[#e8e8e8] bg-white" style="display:flex; gap:10px;">
+      <button type="button" data-action="product-drawer#togglePreview"
+              class="no-min-h h-[44px] px-4 rounded-full text-[13px] font-bold text-[#777] border border-[#a1a4aa] hover:border-[#1f1f1f] hover:text-[#1f1f1f] transition-colors">
+        Preview
+      </button>
+      <button type="button" data-action="product-drawer#submitWith" data-commit="draft"
+              class="no-min-h flex-1 h-[44px] rounded-full text-[13px] font-bold text-[#1f1f1f] bg-white border border-[#1f1f1f] hover:bg-[#f0f0f0] transition-colors">
+        Save as Draft
+      </button>
+      <button type="button" data-action="product-drawer#submitWith" data-commit="publish"
+              class="no-min-h flex-1 h-[44px] rounded-full text-[13px] font-bold text-white bg-[#28ba93] hover:bg-[#22a882] transition-colors">
+        <%= editing && product.published? ? "Save & keep live" : "Publish" %>
+      </button>
+    </div>
+  <% end %>
+</div>
