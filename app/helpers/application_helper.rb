@@ -20,15 +20,14 @@ module ApplicationHelper
     ]
   end
 
-  # Vendor nav. "Invoices" (round 2, E5) is still a placeholder — same "#" convention
-  # the buyer nav already uses for unbuilt screens.
+  # Vendor nav. Invoicing lives on the order itself ("Issue invoice" in the order
+  # lifecycle) — there is no separate Invoices surface.
   def vendor_nav_links
     [
       { label: "Dashboard",  icon: "/icon_dashboard.svg",       href: vendor_dashboard_path },
       { label: "Orders",     icon: "/icon_purchase_orders.svg", href: vendor_orders_path },
       { label: "Deliveries", icon: "/icon_all_orders.svg",      href: vendor_deliveries_path },
       { label: "Products",   icon: "/icon_products.svg",        href: vendor_listings_path },
-      { label: "Invoices",   icon: "/icon_requests.svg",        href: vendor_invoices_path },
     ]
   end
 

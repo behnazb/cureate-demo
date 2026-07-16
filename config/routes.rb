@@ -20,12 +20,6 @@ Rails.application.routes.draw do
     # Shop home (E5) — greeting, top tasks, stats.
     get "dashboard", to: "dashboard#index", as: :dashboard
 
-    # Invoicing (E5, PRD story 7). An invoice is generated FROM a purchase order, so it
-    # shares the PO's id — there's no separate invoice record to create.
-    resources :invoices, only: [:index, :show] do
-      member { patch :send_email }
-    end
-
     # Delivery schedule (E2, PRD story 3) — calendar + list.
     resources :deliveries, only: [:index]
 

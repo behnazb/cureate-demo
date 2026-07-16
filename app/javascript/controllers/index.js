@@ -31,7 +31,6 @@ import FilterDrawerController     from "./filter_drawer_controller"
 import OrderActionsController     from "./order_actions_controller"
 import BackController             from "./back_controller"
 import ProductDrawerController    from "./product_drawer_controller"
-import InvoiceController          from "./invoice_controller"
 
 application.register("cart",                  CartController)
 application.register("cart-drawer",           CartDrawerController)
@@ -58,4 +57,3 @@ application.register("filter-drawer",         FilterDrawerController)
 application.register("order-actions",         OrderActionsController)
 application.register("back",                  BackController)
 application.register("product-drawer",        ProductDrawerController)
-application.register("invoice",               InvoiceController)
