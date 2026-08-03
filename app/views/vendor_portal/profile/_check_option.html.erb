@@ -1,0 +1,14 @@
+<%#
+  One checkbox row — the filter panel's checkbox pattern (hidden input, 16px
+  rounded box, white icon_checkmark.svg when checked), except the checked state
+  rides the real input's :checked via CSS (.check-input/.check-box in
+  application.tailwind.css) instead of a Stimulus toggle, because this sits in a
+  plain form that posts. Locals: name, value, checked.
+%>
+<label class="flex items-center gap-2.5 py-1 cursor-pointer group no-min-h">
+  <%= check_box_tag name, value, checked, id: nil, class: "check-input sr-only" %>
+  <div class="check-box w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all border-[#a1a4aa] group-hover:border-[#28ba93]">
+    <img src="/icon_checkmark.svg" alt="" class="hidden w-[9px] h-[9px]">
+  </div>
+  <span class="text-[13px] transition-colors text-[#444955] group-hover:text-[#1f1f1f]"><%= value %></span>
+</label>

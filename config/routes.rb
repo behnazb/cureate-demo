@@ -20,6 +20,11 @@ Rails.application.routes.draw do
     # Shop home (E5) — greeting, top tasks, stats.
     get "dashboard", to: "dashboard#index", as: :dashboard
 
+    # My Profile — the vendor-managed source of truth for the buyer-facing vendor
+    # page. One sectioned form, one save; writes straight to the in-memory Vendor.
+    get   "profile", to: "profile#show", as: :profile
+    patch "profile", to: "profile#update"
+
     # Delivery schedule (E2, PRD story 3) — calendar + list.
     resources :deliveries, only: [:index]
 

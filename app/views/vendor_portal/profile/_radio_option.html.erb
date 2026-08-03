@@ -1,0 +1,17 @@
+<%#
+  One radio row — same visual family as _check_option (hidden input, 16px round
+  dot, checked state driven by the real input's :checked via CSS — see
+  .radio-input/.radio-dot in application.tailwind.css) so plain posting forms
+  need no Stimulus. Locals: name, value, checked, label (optional — defaults to
+  value), sublabel (optional muted suffix, e.g. the revenue range).
+%>
+<% label ||= value; sublabel ||= nil %>
+<label class="flex items-center gap-2.5 py-1 cursor-pointer group no-min-h">
+  <%= radio_button_tag name, value, checked, id: nil, class: "radio-input sr-only" %>
+  <div class="radio-dot w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all border-[#a1a4aa] group-hover:border-[#28ba93]">
+    <span class="hidden w-2 h-2 rounded-full bg-white"></span>
+  </div>
+  <span class="text-[13px] transition-colors text-[#444955] group-hover:text-[#1f1f1f]">
+    <%= label %><% if sublabel %> <span class="text-[11px] text-[#a1a4aa]"><%= sublabel %></span><% end %>
+  </span>
+</label>

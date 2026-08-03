@@ -133,3 +133,40 @@ button, a { min-height: 44px; }
   -webkit-mask-size: contain;
           mask-size: contain;
 }
+
+/* ─── Checkbox (no-JS forms) ──────────────────────────────────────────────────
+   The filter panel's checkbox visual (16px box + icon_checkmark.svg), with the
+   checked state driven by the real input's :checked instead of a Stimulus class
+   toggle — used by plain forms that post, e.g. the vendor My Profile page.
+   Markup: shared/_check_option-style label > input.check-input + div.check-box > img */
+.check-input:checked + .check-box {
+  background-color: #28ba93;
+  border-color: #28ba93;
+}
+.check-input:checked + .check-box > img {
+  display: block;
+}
+
+/* ─── Radio (no-JS forms) ─────────────────────────────────────────────────────
+   Round sibling of .check-box, same pattern: the real input's :checked drives
+   the visual. Markup: vendor_portal/profile/_radio_option label >
+   input.radio-input + div.radio-dot > span */
+.radio-input:checked + .radio-dot {
+  background-color: #28ba93;
+  border-color: #28ba93;
+}
+.radio-input:checked + .radio-dot > span {
+  display: block;
+}
+
+/* ─── Business Goals cards (My Profile) ───────────────────────────────────────
+   Selectable icon cards; :checked highlights the card and reveals the corner
+   check badge. Markup: label > input.goal-input + div.goal-card > .goal-check */
+.goal-input:checked + .goal-card {
+  border-color: #28ba93;
+  background-color: #f6fcfa;
+  box-shadow: 0 0 0 1px #28ba93;
+}
+.goal-input:checked + .goal-card .goal-check {
+  display: flex;
+}

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "mcp__figma-remote-mcp__get_design_context",
+      "mcp__figma-remote-mcp__generate_figma_design",
+      "Bash(open \"http://localhost:3000/products#figmacapture=2e9106c1-e9b0-43a9-8264-29c5457ee5c5&figmaendpoint=https%3A%2F%2Fmcp.figma.com%2Fmcp%2Fcapture%2F2e9106c1-e9b0-43a9-8264-29c5457ee5c5%2Fsubmit&figmadelay=1000\")",
+      "Bash(open \"http://localhost:3000/purchase-orders#figmacapture=dac76ea5-dd38-4fa4-8631-19c378fcd567&figmaendpoint=https%3A%2F%2Fmcp.figma.com%2Fmcp%2Fcapture%2Fdac76ea5-dd38-4fa4-8631-19c378fcd567%2Fsubmit&figmadelay=1000\")",
+      "Bash(open \"http://localhost:3000/purchase-orders/004-CHARLES-00017#figmacapture=4e1c1a12-1833-45d6-a7af-e10a65944981&figmaendpoint=https%3A%2F%2Fmcp.figma.com%2Fmcp%2Fcapture%2F4e1c1a12-1833-45d6-a7af-e10a65944981%2Fsubmit&figmadelay=1000\")",
+      "Bash(open \"http://localhost:3000/vendors#figmacapture=ed33d212-e390-475e-948e-0653c8a667f7&figmaendpoint=https%3A%2F%2Fmcp.figma.com%2Fmcp%2Fcapture%2Fed33d212-e390-475e-948e-0653c8a667f7%2Fsubmit&figmadelay=1000\")",
+      "Bash(open \"http://localhost:3000/vendors/2betties#figmacapture=c04ce701-ba93-42bb-bfcc-2f4a1f695dac&figmaendpoint=https%3A%2F%2Fmcp.figma.com%2Fmcp%2Fcapture%2Fc04ce701-ba93-42bb-bfcc-2f4a1f695dac%2Fsubmit&figmadelay=1000\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(gh pr:*)",
+      "Bash(git -C /Users/naz/Desktop/Workspaces/Clients/Cureate/cureate-demo commit -m ' *)",
+      "Bash(git -C /Users/naz/Desktop/Workspaces/Clients/Cureate/cureate-demo add -A)",
+      "Bash(git -C /Users/naz/Desktop/Workspaces/Clients/Cureate/cureate-demo status --short)",
+      "Bash(git -C /Users/naz/Desktop/Workspaces/Clients/Cureate/cureate-demo diff --cached --stat)",
+      "Bash(git reset *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}

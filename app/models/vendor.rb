@@ -18,6 +18,8 @@ class Vendor
     logo about story owned goals order_rules products social_links
     insurance health_clearance production seasonal_offerings growth_goals
     email remit_to
+    owner_names city state street_address address_line2 zip phone
+    delivery_shipping moq_details
   ].freeze
   attr_accessor(*ATTRS)
 

@@ -1,0 +1,320 @@
+<% content_for :title, "My Profile — #{@vendor.name} · Cureate Connect" %>
+<%
+  # ── Shared control tokens (same family as the product drawer, so forms can't drift) ──
+  card    = "bg-white border border-[#e8e8e8] rounded-xl p-5"
+  label   = "text-[11px] font-bold text-[#777] uppercase tracking-wide"
+  flabel  = "text-[13px] font-bold text-[#1f1f1f] mb-1"
+  fhelp   = "text-[12px] text-[#777] mb-2 leading-relaxed"
+  slabel  = "text-[11px] text-[#777] mb-1"
+  field   = "w-full h-[38px] rounded-lg border border-[#a1a4aa] px-3 text-[13px] text-[#444955] bg-white outline-none focus:border-[#28ba93] transition-colors"
+  area    = "w-full rounded-lg border border-[#a1a4aa] px-3 py-2.5 text-[13px] text-[#444955] bg-white outline-none focus:border-[#28ba93] transition-colors leading-relaxed"
+  req     = '<span style="color:#d9534f;">*</span>'.html_safe
+
+  # Section header — production's underlined style ("About", "Logistics & Fulfillment").
+  section_h = ->(text) {
+    <<~HTML.html_safe
+      <div class="mb-1">
+        <h2 class="text-[17px] font-bold text-[#1f1f1f] inline-block">#{ERB::Util.html_escape(text)}
+          <span class="block h-[3px] w-9 rounded-full mt-1" style="background-color:#28ba93;"></span>
+        </h2>
+      </div>
+    HTML
+  }
+
+  # ── Option lists — 1:1 with the production Connect edit view ──
+  business_type_options = ["Corporation", "Partnership", "Sole Proprietorship", "Family-owned", "Social Enterprise"]
+  revenue_options = [
+    { value: "Start-Up (<$250K/yr)",         label: "Start-Up",     sublabel: "< $250K/yr" },
+    { value: "Seed Stage ($250K-$500K/yr)",  label: "Seed Stage",   sublabel: "$250K-$500K/yr" },
+    { value: "Early Stage ($500K-$1M/yr)",   label: "Early Stage",  sublabel: "$500K-$1M/yr" },
+    { value: "Growth Stage ($1M+/yr)",       label: "Growth Stage", sublabel: "$1M+/yr" },
+  ]
+  certification_options = ["Woman-owned Business", "Minority-owned Business", "Cureate Courses Alumni"]
+  employee_options      = ["1", "2-10", "11-20", "20+"]
+  insurance_options     = ["General Liability Insurance", "Auto Coverage", "Workers' Compensation"]
+  state_options         = [["District of Columbia", "DC"], ["Maryland", "MD"], ["Virginia", "VA"]]
+
+  goal_options = [
+    { value: "Gifting Product", title: "Gifting Product",
+      desc: "Are your products perfect for gift shops, gifting, or customizing for a specific occasion?",
+      icon: "gift" },
+    { value: "Retail Product", title: "Retail Product",
+      desc: "You want your product on the shelves of retail spaces as point-of-sale snacks, grab & go meals, beverages, and more! Your items are sold in your branded packaging.",
+      icon: "tag" },
+    { value: "Back-of-House Product", title: "Back-of-House Product",
+      desc: "Able to produce your product in bulk? Choose this goal to wholesale your product to institutional buyers (universities, hospitals), restaurant groups, and more.",
+      icon: "boxes" },
+    { value: "Events/Catering Service", title: "Events/Catering Service",
+      desc: "Do you have a service offering available for purchase? Whether it's catered drop-off or an onsite pop-up, you're interested and available for events or catering opportunities.",
+      icon: "catering" },
+  ]
+
+  goal_icons = {
+    "gift"     => '<svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#28ba93" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="13" width="24" height="16" rx="1.5"/><path d="M3.5 8.5h27v4.5h-27z"/><path d="M17 8.5v20.5M17 8.5c-2.5 0-6.5-.8-6.5-3.2C10.5 3 13 2.6 14.5 3.8 16 5 17 8.5 17 8.5zm0 0c2.5 0 6.5-.8 6.5-3.2C23.5 3 21 2.6 19.5 3.8 18 5 17 8.5 17 8.5z"/></svg>',
+    "tag"      => '<svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#28ba93" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11.3c.6 0 1.2.24 1.6.66L29.3 17.1a2.3 2.3 0 010 3.25l-8.95 8.95a2.3 2.3 0 01-3.25 0L4.66 16.9A2.3 2.3 0 014 15.3V4z"/><circle cx="10.5" cy="10.5" r="1.8"/><path d="M19.5 13.2v9.6M21.7 14.9c-.5-.7-1.3-1-2.2-1-1.2 0-2.2.7-2.2 1.9 0 2.5 4.6 1.4 4.6 3.9 0 1.2-1 1.9-2.4 1.9-1 0-1.9-.4-2.4-1.2"/></svg>',
+    "boxes"    => '<svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#28ba93" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="17.5" width="12" height="12" rx="1"/><rect x="18" y="17.5" width="12" height="12" rx="1"/><rect x="11" y="4.5" width="12" height="12" rx="1"/><path d="M10 17.5v4M24 17.5v4M17 4.5v4"/></svg>',
+    "catering" => '<svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#28ba93" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.5v9.5a3 3 0 01-3 3v14.5M8 3.5V10M5 3.5v9.5a3 3 0 003 3M23 30.5V19.8c-2.4-.9-4-3.6-4-7.3 0-5 2.7-9 6-9v27"/></svg>',
+  }
+
+  sel_certs     = Array(@vendor.certifications)
+  sel_goals     = Array(@vendor.goals)
+  sel_insurance = @vendor.insurance.is_a?(String) ? @vendor.insurance.split(",").map(&:strip) : Array(@vendor.insurance)
+  socials       = @vendor.social_links.is_a?(Hash) ? @vendor.social_links : {}
+  social_val    = ->(k) { v = socials[k]; v.is_a?(String) ? v : nil }
+
+  social_icons = {
+    facebook:  '<svg width="16" height="16" viewBox="0 0 16 16" fill="#444955"><path d="M9.1 16V8.7h2.4l.4-2.8H9.1V4.1c0-.8.2-1.4 1.4-1.4h1.5V.2C11.7.1 10.8 0 9.8 0 7.7 0 6.2 1.3 6.2 3.8v2.1H3.8v2.8h2.4V16h2.9z"/></svg>',
+    twitter:   '<svg width="16" height="16" viewBox="0 0 16 16" fill="#444955"><path d="M16 3c-.6.3-1.2.4-1.9.5.7-.4 1.2-1 1.4-1.8-.6.4-1.3.6-2.1.8A3.3 3.3 0 007.8 5.5 9.3 9.3 0 011.1 2 3.3 3.3 0 002.1 6.4c-.5 0-1-.2-1.5-.4v.1c0 1.6 1.1 2.9 2.6 3.2-.3.1-.6.1-.9.1l-.6-.1c.4 1.3 1.6 2.3 3.1 2.3A6.6 6.6 0 010 13.1 9.3 9.3 0 005 14.5c6 0 9.3-5 9.3-9.3v-.4C15 4.3 15.6 3.7 16 3z"/></svg>',
+    instagram: '<svg width="16" height="16" viewBox="0 0 16 16" fill="#444955"><path d="M8 1.4c2.1 0 2.4 0 3.3.1.8 0 1.2.2 1.5.3.4.1.7.3 1 .6.3.3.5.6.6 1 .1.3.3.7.3 1.5.1.9.1 1.2.1 3.3s0 2.4-.1 3.3c0 .8-.2 1.2-.3 1.5-.1.4-.3.7-.6 1-.3.3-.6.5-1 .6-.3.1-.7.3-1.5.3-.9.1-1.2.1-3.3.1s-2.4 0-3.3-.1c-.8 0-1.2-.2-1.5-.3-.4-.1-.7-.3-1-.6-.3-.3-.5-.6-.6-1-.1-.3-.3-.7-.3-1.5-.1-.9-.1-1.2-.1-3.3s0-2.4.1-3.3c0-.8.2-1.2.3-1.5.1-.4.3-.7.6-1 .3-.3.6-.5 1-.6.3-.1.7-.3 1.5-.3.9-.1 1.2-.1 3.3-.1zM8 0C5.8 0 5.6 0 4.7.1 3.8.1 3.2.3 2.7.5c-.6.2-1 .5-1.5 1S.7 2.4.5 2.9C.3 3.4.1 4 .1 4.9 0 5.8 0 6 0 8s0 2.2.1 3.1c0 .9.2 1.5.4 2 .2.6.5 1 1 1.5s.9.8 1.5 1c.5.2 1.1.4 2 .4C5.8 16 6 16 8 16s2.2 0 3.1-.1c.9 0 1.5-.2 2-.4.6-.2 1-.5 1.5-1s.8-.9 1-1.5c.2-.5.4-1.1.4-2 .1-.9.1-1.1.1-3s0-2.2-.1-3.1c0-.9-.2-1.5-.4-2-.2-.6-.5-1-1-1.5s-.9-.8-1.5-1c-.5-.2-1.1-.4-2-.4C10.2 0 10 0 8 0z"/><path d="M8 3.9A4.1 4.1 0 108 12 4.1 4.1 0 008 3.9zm0 6.8A2.7 2.7 0 118 5.3a2.7 2.7 0 010 5.4z"/><circle cx="12.3" cy="3.7" r="1"/></svg>',
+  }
+%>
+
+<div class="flex flex-1 min-h-0 bg-white font-['Lato']">
+  <%= render "shared/sidebar" %>
+
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+    <%# ── Header — title left; [Preview] [Save Profile] right. The Save button
+        lives outside the <form> and submits it via the HTML form attribute. ── %>
+    <div class="flex items-center justify-between px-4 md:px-9 py-4 border-b border-[#e8e8e8] bg-white shrink-0">
+      <div class="flex items-center min-w-0" style="gap:20px;">
+        <h1 class="text-[20px] font-bold text-[#1f1f1f] whitespace-nowrap">My Profile</h1>
+        <span class="text-[12px] text-[#777] whitespace-nowrap hidden md:inline">Your shop details — this is what powers your public page</span>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <%= link_to "Preview", vendor_path(@vendor.id),
+              class: "no-min-h border border-[#035257] text-[#035257] text-[13px] font-bold rounded-full px-5 h-[38px] hover:bg-[#f0fafa] transition-colors whitespace-nowrap inline-flex items-center" %>
+        <%= button_tag "Save Profile", type: :submit, form: "profile-form", class: primary_cta_class %>
+      </div>
+    </div>
+
+    <%# Flash — same treatment as Products %>
+    <% if flash[:notice] %>
+      <div class="px-4 md:px-9 py-2.5 border-b border-[#d4f5e9] shrink-0" style="background-color:#f0fbf7;">
+        <p class="text-[12px] font-bold flex items-center gap-1.5" style="color:#065f46;">
+          <span class="icon-check w-3 h-3 shrink-0"></span>
+          <%= flash[:notice] %>
+        </p>
+      </div>
+    <% end %>
+
+    <%# ── Scrollable body — production's two-column edit view: narrow rail
+        (image + structured business facts) and main column (name, socials,
+        About, Business Goals, Logistics & Fulfillment). ── %>
+    <div class="flex-1 overflow-y-auto px-4 md:px-9 py-6 bg-[#f7f5ef]">
+      <%= form_with url: vendor_profile_path, method: :patch, local: true,
+            id: "profile-form",
+            html: { class: "flex flex-col md:flex-row items-start gap-6 max-w-[1200px]" } do %>
+
+        <%# ════ Left rail ════ %>
+        <div class="w-full md:w-[280px] shrink-0 flex flex-col gap-4">
+
+          <%# ── Profile image ── %>
+          <div class="<%= card %>">
+            <div class="w-[140px] h-[140px] mx-auto rounded-xl border border-[#e8e8e8] bg-white overflow-hidden flex items-center justify-center mb-4">
+              <img src="<%= @vendor.logo %>" alt="<%= @vendor.name %>" class="w-full h-full object-contain p-2">
+            </div>
+            <p class="<%= label %> mb-2">Profile Image</p>
+            <p class="text-[11px] text-[#777] italic leading-relaxed mb-3">
+              Profile images are cropped to 300 x 300 pixels. To update, upload a new
+              file here, then click the &lsquo;Save Profile&rsquo; button. Please keep file
+              upload sizes below 300kb.
+            </p>
+            <%= file_field_tag :profile_image, class: "block w-full text-[11px] text-[#777] file:mr-2 file:no-min-h file:border file:border-[#a1a4aa] file:rounded-full file:px-3 file:py-1 file:bg-white file:text-[11px] file:font-bold file:text-[#444955] file:cursor-pointer" %>
+          </div>
+
+          <%# ── Contact & location ── %>
+          <div class="<%= card %>">
+            <p class="<%= label %> mb-3">Contact &amp; Location</p>
+            <div class="flex flex-col gap-3">
+              <div>
+                <p class="<%= slabel %>">Street Address</p>
+                <%= text_field_tag :street_address, @vendor.street_address, class: field %>
+              </div>
+              <div>
+                <p class="<%= slabel %>">Apt / Suite / Unit</p>
+                <%= text_field_tag :address_line2, @vendor.address_line2, class: field %>
+              </div>
+              <div>
+                <p class="<%= slabel %>">City</p>
+                <%= text_field_tag :city, @vendor.city, class: field %>
+              </div>
+              <div>
+                <p class="<%= slabel %>">State</p>
+                <%= select_tag :state, options_for_select(state_options, @vendor.state), class: "#{field} cursor-pointer" %>
+              </div>
+              <div>
+                <p class="<%= slabel %>">Zip Code</p>
+                <%= text_field_tag :zip, @vendor.zip, class: field %>
+              </div>
+              <div>
+                <p class="<%= slabel %>">Phone</p>
+                <%= telephone_field_tag :phone, @vendor.phone, class: field %>
+              </div>
+              <div>
+                <p class="<%= slabel %>">Website</p>
+                <%= text_field_tag :website, @vendor.website, placeholder: "https://", class: field %>
+              </div>
+              <div>
+                <p class="<%= slabel %>">Email</p>
+                <%= text_field_tag :email, @vendor.email, class: field %>
+                <p class="text-[11px] text-[#a1a4aa] italic leading-relaxed mt-1.5">
+                  You will be connected to Buyers through this email. It will not be publicly listed.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <%# ── Business type ── %>
+          <div class="<%= card %>">
+            <p class="<%= label %> mb-2">Business Type</p>
+            <% business_type_options.each do |o| %>
+              <%= render "radio_option", name: "business_type", value: o, checked: @vendor.business_type == o %>
+            <% end %>
+          </div>
+
+          <%# ── Revenue ── %>
+          <div class="<%= card %>">
+            <p class="<%= label %> mb-2">Revenue</p>
+            <% revenue_options.each do |o| %>
+              <%= render "radio_option", name: "revenue", value: o[:value], label: o[:label], sublabel: o[:sublabel],
+                    checked: @vendor.revenue == o[:value] %>
+            <% end %>
+          </div>
+
+          <%# ── Business certifications ── %>
+          <div class="<%= card %>">
+            <p class="<%= label %> mb-2">Business Certifications</p>
+            <% certification_options.each do |o| %>
+              <%= render "check_option", name: "business_certifications[]", value: o,
+                    checked: sel_certs.any? { |c| c.casecmp?(o) } %>
+            <% end %>
+          </div>
+
+          <%# ── Employees ── %>
+          <div class="<%= card %>">
+            <p class="<%= label %> mb-2">Employees</p>
+            <% employee_options.each do |o| %>
+              <%= render "radio_option", name: "employees", value: o, checked: @vendor.employees == o %>
+            <% end %>
+          </div>
+
+          <%# ── Insurance ── %>
+          <div class="<%= card %>">
+            <p class="<%= label %> mb-2">Insurance</p>
+            <% insurance_options.each do |o| %>
+              <%= render "check_option", name: "insurance[]", value: o, checked: sel_insurance.include?(o) %>
+            <% end %>
+          </div>
+
+          <%# ── Health clearance ── %>
+          <div class="<%= card %>">
+            <p class="<%= label %> mb-2">Health Clearance</p>
+            <p class="text-[13px] text-[#444955] leading-snug mb-2">Have you been cleared by your state's Health Department?</p>
+            <div class="flex items-center gap-6">
+              <% %w[Yes No].each do |o| %>
+                <%= render "radio_option", name: "health_clearance", value: o, checked: @vendor.health_clearance == o %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <%# ════ Main column ════ %>
+        <div class="flex-1 min-w-0 flex flex-col gap-4">
+
+          <%# ── Business name + socials ── %>
+          <div class="<%= card %>">
+            <%= text_field_tag :name, @vendor.name, required: true,
+                  class: "w-full rounded-lg border border-[#a1a4aa] px-4 h-[52px] text-[22px] font-bold tracking-wide uppercase text-[#1f1f1f] bg-white outline-none focus:border-[#28ba93] transition-colors" %>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+              <% { facebook: "Facebook", twitter: "Twitter", instagram: "Instagram" }.each do |key, _l| %>
+                <div class="flex items-center gap-2 rounded-lg border border-[#a1a4aa] px-3 h-[38px] bg-white focus-within:border-[#28ba93] transition-colors">
+                  <span class="shrink-0 opacity-70"><%= social_icons[key].html_safe %></span>
+                  <%= text_field_tag key, social_val.(key), placeholder: "username",
+                        class: "no-min-h w-full h-full text-[13px] text-[#444955] bg-transparent outline-none border-0 p-0" %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+
+          <%# ── About ── %>
+          <div class="<%= card %>">
+            <%= section_h.("About") %>
+            <div class="flex flex-col gap-5 mt-4">
+              <div>
+                <p class="<%= flabel %>">Owner(s) <%= req %></p>
+                <%= text_field_tag :owner_names, @vendor.owner_names, required: true, class: field %>
+              </div>
+              <div>
+                <p class="<%= flabel %>">About Your Business <%= req %></p>
+                <p class="<%= fhelp %>">A brief description of your company and the products or services you offer.</p>
+                <%= text_area_tag :about, @vendor.about, rows: 4, required: true, class: area %>
+              </div>
+              <div>
+                <p class="<%= flabel %>">What's Your Story? <%= req %></p>
+                <p class="<%= fhelp %>">How did you get started? Who do you serve? What makes your business, or your experiences as an owner, unique?</p>
+                <%= text_area_tag :story, @vendor.story, rows: 6, required: true, class: area %>
+              </div>
+
+              <div>
+                <p class="<%= flabel %> mb-3">Your Business Goals <%= req %></p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <% goal_options.each do |g| %>
+                    <label class="cursor-pointer no-min-h block">
+                      <%= check_box_tag "goals[]", g[:value], sel_goals.include?(g[:value]), id: nil, class: "goal-input sr-only" %>
+                      <div class="goal-card relative h-full rounded-xl border border-[#e8e8e8] bg-white p-4 transition-all hover:border-[#28ba93]">
+                        <div class="goal-check absolute top-3 right-3 w-5 h-5 rounded-full items-center justify-center hidden" style="background-color:#28ba93;">
+                          <img src="/icon_checkmark.svg" alt="" class="w-[10px] h-[10px]">
+                        </div>
+                        <div class="mb-2.5"><%= goal_icons[g[:icon]].html_safe %></div>
+                        <p class="text-[14px] font-bold text-[#1f1f1f] mb-1"><%= g[:title] %></p>
+                        <p class="text-[12px] text-[#777] leading-relaxed"><%= g[:desc] %></p>
+                      </div>
+                    </label>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <%# ── Logistics & fulfillment ── %>
+          <div class="<%= card %>">
+            <%= section_h.("Logistics & Fulfillment") %>
+            <div class="flex flex-col gap-5 mt-4">
+              <div>
+                <p class="<%= flabel %>">Delivery &amp; Shipping <%= req %></p>
+                <p class="<%= fhelp %>">Do you <b>Deliver</b>, <b>Ship</b>, or <b>Both</b>? Please describe. Provide detailed information about your delivery and/or shipping radius and costs associated.</p>
+                <%= text_area_tag :delivery_shipping, @vendor.delivery_shipping, rows: 3, required: true, class: area %>
+              </div>
+              <div>
+                <p class="<%= flabel %>">Delivery Schedule <%= req %></p>
+                <p class="<%= fhelp %>">What day(s) of the week do you deliver and/or ship based on the information provided above?</p>
+                <%= text_field_tag :delivery_schedule, @vendor.delivery_schedule, required: true, class: field %>
+              </div>
+              <div>
+                <p class="<%= flabel %>">Minimum Order Quantities</p>
+                <p class="<%= fhelp %>">Do you have a total order Minimum Order Quantity (MOQ)? Is this by <b>total dollars</b>, or <b>total cases</b>? For example: 5 case minimum, mixed SKUs or $600 minimum catering order.</p>
+                <%= text_area_tag :moq_details, @vendor.moq_details, rows: 4, class: area %>
+              </div>
+              <div>
+                <p class="<%= flabel %>">Production</p>
+                <p class="<%= fhelp %>">Where do you currently produce? Are you able to handle <b>last-minute orders</b> (e.g. production to delivery within 48 hours)? If yes, which types of products are available in this turnaround time?</p>
+                <%= text_area_tag :production, @vendor.production, rows: 4, class: area %>
+              </div>
+              <div>
+                <p class="<%= flabel %>">Seasonal Offerings</p>
+                <p class="<%= fhelp %>">Do you offer seasonal products and/or services? Tell us more about the frequency in which you rotate your products (Quarterly? By holiday? By calendar season?)</p>
+                <%= text_area_tag :seasonal_offerings, @vendor.seasonal_offerings, rows: 3, class: area %>
+              </div>
+              <div>
+                <p class="<%= flabel %>">Growth Goals</p>
+                <p class="<%= fhelp %>">Paint us a picture: Where do you see your business growing in the next 5 years? This information helps Cureate and our Buyer partners better understand your bigger vision and goals.</p>
+                <%= text_area_tag :growth_goals, @vendor.growth_goals, rows: 3, class: area %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

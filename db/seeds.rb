@@ -23,7 +23,24 @@ twobetties = Vendor.new(
   business_type: "Corporation",
   revenue: "Early Stage ($500K-$1M/yr)",
   employees: "2-10",
-  certifications: ["Woman-Owned Business"],
+  # ── My Profile (vendor-managed shop details, 1:1 with the production edit view) ──
+  owner_names: "Nancy Becker and Bridget Greaney",
+  street_address: "1215 E. Fort Drive", address_line2: "#004",
+  city: "Baltimore", state: "MD", zip: "21230",
+  phone: "(410) 555-0164",
+  insurance: ["General Liability Insurance", "Workers' Compensation"],
+  health_clearance: "Yes",
+  delivery_shipping: "We deliver across the Baltimore metro with a flat delivery fee of $10, " \
+                     "and ship our snack packs regionally via UPS Ground — shipping is billed at cost.",
+  moq_details: "Minimum 1 case (36 units) per order. SKUs are mix-and-match — " \
+               "flavors are interchangeable to meet the minimum.",
+  production: "Our production kitchen is in Locust Point, Baltimore. We can accommodate " \
+              "last-minute orders of in-stock flavors with 48 hours notice.",
+  seasonal_offerings: "Seasonal flavors rotate quarterly, plus holiday gift boxes each November and December.",
+  growth_goals: "Over the next 5 years we're growing 2Betties into the go-to better-for-you snack " \
+                "across mid-Atlantic campuses and hospitals, with a second production line for gifting.",
+  social_links: { facebook: "2betties", twitter: "2betties", instagram: "2betties" },
+  certifications: ["Woman-owned Business"],
   categories: ["Snacks"],
   delivery_schedule: "Mon to Fri",
   delivery_days: %w[Mon Tue Wed Thu Fri], preferred_delivery_day: "Mon",
@@ -32,7 +49,7 @@ twobetties = Vendor.new(
   about: "2Betties makes better-for-you snacking easy and joyful. Certified Gluten-Free, Non-GMO, and Women-Owned.",
   owned: "Owned by: Nancy Becker and Bridget Greaney",
   story: "2Betties started in a college dorm room — co-founders on a mission to raise the bar one better bite at a time.",
-  goals: ["Retail Product"],
+  goals: ["Retail Product", "Gifting Product"],
   order_rules: {
     min_cases: 1, units_per_case: 36, min_units: 36, mix_and_match: true,
     mix_and_match_note: "Minimum 1 case (36 units) required. Flavors are interchangeable to meet the minimum.",
@@ -100,7 +117,7 @@ ethiopian = Vendor.new(
   story: "Beza Bisrat, MBA, is the founder of Ethiopian Delights. As an Ethiopian American, she felt disconnected from her culture when her career took her away from her home in Washington D.C. She found solace in cooking and was inspired to make authentic Ethiopian packaged food more accessible and visible.",
   owned: "Owned by: Beza Bisrat",
   goals: ["Retail Product"],
-  social_links: { instagram: true, facebook: true },
+  social_links: { instagram: "ethiopiandelights", facebook: "ethiopiandelights" },
   order_rules: {
     min_cases: 1, units_per_case: 12, min_units: 12, mix_and_match: true,
     mix_and_match_note: "Minimum 1 case (12 units) required. Flavors are interchangeable to meet the minimum.",

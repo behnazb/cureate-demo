@@ -28,6 +28,7 @@ module ApplicationHelper
       { label: "Orders",     icon: "/icon_purchase_orders.svg", href: vendor_orders_path },
       { label: "Deliveries", icon: "/icon_all_orders.svg",      href: vendor_deliveries_path },
       { label: "Products",   icon: "/icon_products.svg",        href: vendor_listings_path },
+      { label: "My Profile", icon: "/icon_buyers.svg",          href: vendor_profile_path },
     ]
   end
 
