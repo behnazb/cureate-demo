@@ -57,3 +57,15 @@ application.register("filter-drawer",         FilterDrawerController)
 application.register("order-actions",         OrderActionsController)
 application.register("back",                  BackController)
 application.register("product-drawer",        ProductDrawerController)
+
+import BannerPickerController    from "./banner_picker_controller"
+application.register("banner-picker",         BannerPickerController)
+
+import ImageUploadController     from "./image_upload_controller"
+application.register("image-upload",          ImageUploadController)
+
+import ChannelDrawerController   from "./channel_drawer_controller"
+application.register("channel-drawer",        ChannelDrawerController)
+
+import RevealController          from "./reveal_controller"
+application.register("reveal",                RevealController)

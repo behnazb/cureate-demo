@@ -20,6 +20,10 @@ class Vendor
     email remit_to
     owner_names city state street_address address_line2 zip phone
     delivery_shipping moq_details
+    banner_image banner_category founder_photo
+    shipping_days business_identity personal_identity
+    marketing_opportunities marketing_opportunities_details
+    sales_channels channel_data
   ].freeze
   attr_accessor(*ATTRS)
 

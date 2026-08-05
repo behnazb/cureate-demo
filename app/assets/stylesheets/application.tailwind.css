@@ -30,6 +30,20 @@ body {
 button, a { min-height: 44px; }
 .no-min-h, .no-min-h button, .no-min-h a { min-height: unset; }
 
+/* ─── Containing block for sr-only form controls ──────────────────────────────
+   Our custom checkboxes/radios/day-chips hide their real inputs with sr-only
+   (position:absolute). Without a positioned ancestor those inputs resolve to
+   the initial containing block, ESCAPE every overflow clip, and extend the
+   root scroll area — the page scrolls into empty white space below the app
+   (measured: 33 unanchored inputs stretched the document to 3x viewport).
+   Every such input is wrapped in a label; make the label its containing block.
+   MUST live in @layer base: un-layered CSS outranks Tailwind v4's layered
+   utilities, so a bare `label` rule would override .absolute on overlay labels
+   (that bug shifted the logo/founder images off-center). */
+@layer base {
+  label { position: relative; }
+}
+
 /* ─── Drawer/panel transitions (replaces framer-motion) ────────────────────── */
 [data-transition="slide-in-right"] {
   transform: translateX(100%);
@@ -169,4 +183,36 @@ button, a { min-height: 44px; }
 }
 .goal-input:checked + .goal-card .goal-check {
   display: flex;
+}
+.goal-input:checked + .goal-card .goal-circle {
+  display: none;
+}
+
+/* ─── Delivery/shipping day chips (My Profile) ────────────────────────────────
+   Multi-select weekday pills; :checked flips the chip to the deep-teal day-chip
+   treatment the cart drawer uses. Markup: label > input.daychip-input + span.daychip */
+.daychip-input:checked + .daychip {
+  background-color: #035257;
+  border-color: #035257;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Yes/No reveals (Health Clearance, Marketing Opportunities) use the standard
+   nested-label .radio-input pattern + the `reveal` Stimulus controller. The
+   earlier sibling-combinator version placed absolutely-positioned sr-only
+   radios as direct flex children, which broke Chrome scroll anchoring when
+   the reveal collapsed — do not reintroduce it. */
+
+/* ─── Select chevron (dropdown component) ─────────────────────────────────────
+   The native arrow hugs the border and ignores padding, so draw our own:
+   appearance-none + an inline SVG chevron exactly 4px from the right edge.
+   padding-right keeps option text clear of the chevron (4px gap + 10px icon + 4px edge). */
+.select-chevron {
+  -webkit-appearance: none;
+          appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23444955' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 28px;
 }

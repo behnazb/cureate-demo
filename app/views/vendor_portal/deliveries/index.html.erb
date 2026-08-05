@@ -4,6 +4,18 @@
   next_month = (@month + 1).beginning_of_month
   units = ->(po) { po.line_items_for(@vendor.id).sum { |li| li.quantity.to_i } }
   weekdays = %w[Sun Mon Tue Wed Thu Fri Sat]
+
+  # ── Responsive default view ─────────────────────────────────────────────
+  # The month calendar is unusable on a phone, so until the vendor explicitly
+  # picks a view we render BOTH and let CSS choose: calendar on md+, list
+  # below md. An explicit ?view= choice (the toggle always sends one) wins on
+  # every screen size. The server can't see the viewport, so this is the only
+  # flash-free way to give mobile a different default.
+  explicit      = %w[calendar list].include?(params[:view])
+  show_calendar = explicit ? @view == "calendar" : true
+  show_list     = explicit ? @view == "list"     : true
+  calendar_wrap = explicit ? "" : "hidden md:block"
+  list_wrap     = explicit ? "" : "md:hidden"
 %>
 
 <div class="flex flex-1 min-h-0 bg-white font-['Lato']">
@@ -52,20 +64,32 @@
         <% end %>
       </div>
 
-      <%# Calendar / list toggle — same component as the Orders page %>
+      <%# Calendar / list toggle — same component as the Orders page.
+          Active state is class-based (not inline style) so the no-choice-yet
+          default can highlight responsively: list below md, calendar on md+. %>
+      <%
+        cal_cls, list_cls =
+          if explicit
+            [@view == "calendar" ? "bg-[#1f1f1f] text-white" : "text-[#777] hover:bg-[#f0f0f0]",
+             @view == "list"     ? "bg-[#1f1f1f] text-white" : "text-[#777] hover:bg-[#f0f0f0]"]
+          else
+            ["text-[#777] md:bg-[#1f1f1f] md:text-white",
+             "bg-[#1f1f1f] text-white md:bg-transparent md:text-[#777] md:hover:bg-[#f0f0f0]"]
+          end
+      %>
       <div class="flex items-center gap-3 shrink-0">
         <div class="flex items-center overflow-hidden" style="border:1px solid #a1a4aa; border-radius:9999px; height:32px;">
           <%= link_to vendor_deliveries_path(view: "calendar", month: @month.strftime("%Y-%m")),
-                class: "no-min-h flex items-center justify-center transition-colors #{@view == 'calendar' ? 'text-white' : 'text-[#777] hover:bg-[#f0f0f0]'}",
-                style: "width:40px; height:32px;#{@view == 'calendar' ? ' background-color:#1f1f1f;' : ''}", title: "Calendar" do %>
+                class: "no-min-h flex items-center justify-center transition-colors #{cal_cls}",
+                style: "width:40px; height:32px;", title: "Calendar" do %>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <rect x="1.5" y="2.5" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
               <path d="M1.5 5.5h11M4.5 1.5v2M9.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
             </svg>
           <% end %>
           <%= link_to vendor_deliveries_path(view: "list"),
-                class: "no-min-h flex items-center justify-center transition-colors #{@view == 'list' ? 'text-white' : 'text-[#777] hover:bg-[#f0f0f0]'}",
-                style: "width:40px; height:32px; border-left:1px solid #a1a4aa;#{@view == 'list' ? ' background-color:#1f1f1f;' : ''}", title: "List" do %>
+                class: "no-min-h flex items-center justify-center transition-colors #{list_cls}",
+                style: "width:40px; height:32px; border-left:1px solid #a1a4aa;", title: "List" do %>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 3h12M1 7h12M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           <% end %>
         </div>
@@ -82,25 +106,37 @@
       delivery date is the only thing on this screen a vendor can't fix by scrolling.
     %>
     <% if @overdue.any? %>
-      <div class="flex items-center gap-3 px-4 md:px-9 py-3 border-b border-[#f0dede] shrink-0" style="background-color:#fdf5f5;">
-        <span class="text-[13px]" style="color:#991b1b;">⚠</span>
-        <p class="text-[13px] text-[#1f1f1f]">
-          <span class="font-bold"><%= pluralize(@overdue.size, "delivery") %></span>
-          past the promised date and not yet fulfilled.
-        </p>
-        <div class="ml-auto flex items-center gap-2">
-          <% @overdue.first(3).each do |po| %>
-            <%= link_to "#{po.id} · #{po.delivery_date_short}", vendor_order_path(po.id),
-                  class: "no-min-h text-[12px] font-bold px-3 h-[30px] rounded-full flex items-center bg-white border border-[#e6cfcf] hover:border-[#991b1b] transition-colors",
-                  style: "color:#991b1b;" %>
-          <% end %>
+      <%# Message and pills stack on mobile (one long flex row wrapped mid-pill
+          and read as noise); the pill row wraps cleanly on its own line there
+          and sits ml-auto on md+. Icon is the design-system warning triangle,
+          not a text glyph. %>
+      <div class="px-4 md:px-9 py-3 border-b border-[#f0dede] shrink-0" style="background-color:#fdf5f5;">
+        <div class="flex flex-col gap-2.5 md:flex-row md:items-center md:gap-3">
+          <p class="text-[13px] text-[#1f1f1f] flex items-center gap-2.5 min-w-0">
+            <svg width="14" height="14" viewBox="0 0 12 12" fill="none" class="shrink-0" style="color:#991b1b;" aria-hidden="true">
+              <path d="M6 1.4L11.2 10.6H0.8L6 1.4Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+              <path d="M6 4.9v2.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+              <circle cx="6" cy="8.9" r="0.6" fill="currentColor"/>
+            </svg>
+            <span><span class="font-bold"><%= pluralize(@overdue.size, "delivery") %></span> past the promised date and not yet fulfilled.</span>
+          </p>
+          <div class="flex flex-wrap items-center gap-2 md:ml-auto md:justify-end">
+            <% @overdue.first(3).each do |po| %>
+              <%= link_to "#{po.id} · #{po.delivery_date_short}", vendor_order_path(po.id),
+                    class: "no-min-h text-[12px] font-bold px-3 h-[30px] rounded-full flex items-center whitespace-nowrap bg-white border border-[#e6cfcf] hover:border-[#991b1b] transition-colors",
+                    style: "color:#991b1b;" %>
+            <% end %>
+            <% if @overdue.size > 3 %>
+              <span class="text-[12px] font-bold whitespace-nowrap" style="color:#991b1b;">+ <%= @overdue.size - 3 %> more</span>
+            <% end %>
+          </div>
         </div>
       </div>
     <% end %>
 
     <%# ═══════════════════════════ CALENDAR ═══════════════════════════════ %>
-    <% if @view == "calendar" %>
-      <div class="flex-1 overflow-y-auto bg-white">
+    <% if show_calendar %>
+      <div class="<%= calendar_wrap %> flex-1 overflow-y-auto bg-white">
 
         <%#
           Legend — the three weights carry the whole meaning of this screen.
@@ -207,9 +243,11 @@
         </div>
       </div>
 
+    <% end %>
+
     <%# ═══════ LIST — the PRD's "at least 30 days out", made literal ═══════ %>
-    <% else %>
-      <div class="flex-1 overflow-y-auto bg-[#f7f5ef]">
+    <% if show_list %>
+      <div class="<%= list_wrap %> flex-1 overflow-y-auto bg-[#f7f5ef]">
         <div class="px-4 md:px-9 py-4 md:py-6">
 
           <p class="text-[12px] text-[#777] mb-4">
@@ -240,7 +278,9 @@
                   <% label, style = vendor_row_status(po, @vendor.id) %>
                   <%= link_to vendor_order_path(po.id),
                         class: "no-min-h flex items-center gap-4 px-5 py-3.5 hover:bg-[#f7f5ef] transition-colors #{'border-t border-[#f0f0f0]' if i.positive?}" do %>
-                    <div class="shrink-0" style="width:150px;">
+                    <%# Natural width on mobile — a fixed 150px column is a third
+                        of a phone screen; the aligned column returns on md+. %>
+                    <div class="shrink-0 md:w-[150px]">
                       <span class="text-[13px] font-bold text-[#28ba93]"><%= po.id %></span>
                     </div>
                     <div class="flex-1 min-w-0">

@@ -21,25 +21,70 @@ twobetties = Vendor.new(
   address: "1215 E. Fort Drive #004, Baltimore, MD 21230",
   website: "https://2betties.com",
   business_type: "Corporation",
-  revenue: "Early Stage ($500K-$1M/yr)",
-  employees: "2-10",
+  revenue: "501,000-600,000",
+  employees: "2-5",
   # ── My Profile (vendor-managed shop details, 1:1 with the production edit view) ──
-  owner_names: "Nancy Becker and Bridget Greaney",
+  # Shop banner (sprint 2 banner round) — picked from the category library.
+  banner_image: "/banners/snacks/bakery-oven.jpg",
+  banner_category: "Snacks",
+  founder_photo: "/vendors/2betties/founder.jpg",
+  owner_names: "Nancy Bridge",
   street_address: "1215 E. Fort Drive", address_line2: "#004",
   city: "Baltimore", state: "MD", zip: "21230",
   phone: "(410) 555-0164",
-  insurance: ["General Liability Insurance", "Workers' Compensation"],
+  insurance: ["General Liability Insurance"],
   health_clearance: "Yes",
   delivery_shipping: "We deliver across the Baltimore metro with a flat delivery fee of $10, " \
                      "and ship our snack packs regionally via UPS Ground — shipping is billed at cost.",
   moq_details: "Minimum 1 case (36 units) per order. SKUs are mix-and-match — " \
                "flavors are interchangeable to meet the minimum.",
-  production: "Our production kitchen is in Locust Point, Baltimore. We can accommodate " \
-              "last-minute orders of in-stock flavors with 48 hours notice.",
+  production: "Our production kitchen is in Locust Point, Baltimore.",
+  shipping_days: %w[Tue],
+  business_identity: ["Woman-Owned Business"],
+  personal_identity: [],
+  marketing_opportunities: "Yes",
+  marketing_opportunities_details: "We offer in-store sampling demos and host quarterly pop-ups at partner " \
+                                   "campuses — two weeks notice preferred.",
+  # ── Sales channels (tabbed) — participation derived from channel_data ──
+  sales_channels: ["Consumer Packaged Goods", "Customization & Gifting"],
+  channel_data: {
+    "cpg" => {
+      "moq_threshold"       => "36",
+      "moq_measure"         => "Units",
+      "moq_label"           => "1 case (36 units) per order",
+      "lead_time"           => "2-3 days",
+      "production_planning" => "Weekly",
+      "capacity"            => "Up to 40 cases with 1 week notice",
+      "fulfillment_method"  => "Both",
+      "who_delivers"        => "We deliver",
+      "delivery_fee"        => "$10 flat delivery; shipping billed at cost",
+      "delivery_radius"     => "DC, MD, VA",
+      "shipping_radius"     => "DC, MD, VA",
+      "carriers"            => ["UPS"],
+      "ops"                 => "Yes",
+      "certifications"      => ["GMP", "ServSafe"],
+    },
+    "gifting" => {
+      "moq_threshold"       => "12",
+      "moq_measure"         => "Units",
+      "moq_label"           => "12 gift boxes",
+      "lead_time"           => "1 week",
+      "production_planning" => "Weekly",
+      "capacity"            => "2 weeks for custom-labeled boxes",
+      "fulfillment_method"  => "Both",
+      "who_delivers"        => "We deliver",
+      "delivery_fee"        => "$10 flat delivery",
+      "delivery_radius"     => "DC, MD, VA",
+      "shipping_radius"     => "DC, MD, VA",
+      "carriers"            => ["UPS"],
+      "ops"                 => "Depends",
+      "certifications"      => ["GMP", "ServSafe"],
+    },
+  },
   seasonal_offerings: "Seasonal flavors rotate quarterly, plus holiday gift boxes each November and December.",
   growth_goals: "Over the next 5 years we're growing 2Betties into the go-to better-for-you snack " \
                 "across mid-Atlantic campuses and hospitals, with a second production line for gifting.",
-  social_links: { facebook: "2betties", twitter: "2betties", instagram: "2betties" },
+  social_links: { instagram: "https://www.instagram.com/2betties", facebook: "https://www.facebook.com/2betties" },
   certifications: ["Woman-owned Business"],
   categories: ["Snacks"],
   delivery_schedule: "Mon to Fri",
@@ -47,7 +92,7 @@ twobetties = Vendor.new(
   min_order_quantity: "2 cases",
   logo: "/vendors/2betties/logo.jpeg",
   about: "2Betties makes better-for-you snacking easy and joyful. Certified Gluten-Free, Non-GMO, and Women-Owned.",
-  owned: "Owned by: Nancy Becker and Bridget Greaney",
+  owned: "Owned by: Nancy Bridge",
   story: "2Betties started in a college dorm room — co-founders on a mission to raise the bar one better bite at a time.",
   goals: ["Retail Product", "Gifting Product"],
   order_rules: {
@@ -709,3 +754,33 @@ PurchaseOrder.all.concat([
     ],
   ),
 ])
+
+# ─── Evergreen delivery dates ─────────────────────────────────────────────────
+# The open orders above (Processing/"Requested" and Confirmed) carry hardcoded
+# delivery dates that drift into the past as real time moves on — leaving the
+# Deliveries page with nothing upcoming and a wall of overdue flags. Re-date
+# them relative to today at boot so the demo always exercises every delivery-
+# management use case: a couple genuinely overdue (the flagging story), and the
+# rest spread across the next four weeks (the calendar + 30-day list stories).
+# Done/Cancelled orders keep their fixed dates — history is allowed to age.
+require "date"
+open_pos = PurchaseOrder.all.select { |po|
+  %w[Processing Confirmed].include?(po.status) && !po.delivery_date.to_s.empty?
+}
+vendor_open, other_open = open_pos.partition { |po| po.includes_vendor?("2betties") }
+
+# Days from today for the demo vendor's open orders, in original date order:
+# two stay overdue, the rest land ahead — nearest first so "upcoming" is never empty.
+offsets = [-6, -2, 2, 5, 9, 14, 21, 28]
+vendor_open.sort_by(&:delivery_date).each_with_index do |po, i|
+  d = Date.today + (offsets[i] || (28 + 7 * (i - offsets.size + 1)))
+  po.delivery_date       = d.iso8601
+  po.delivery_date_short = d.strftime("%b %-d")
+end
+
+# Open orders that don't involve the demo vendor just stay plausibly current.
+other_open.each do |po|
+  d = Date.today + 3
+  po.delivery_date       = d.iso8601
+  po.delivery_date_short = d.strftime("%b %-d")
+end

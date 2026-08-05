@@ -118,19 +118,10 @@
 
                 <p class="text-[11px] text-[#999] mt-0.5">ID #<%= product.id %></p>
 
-                <div class="flex items-center justify-between" style="margin-top:10px;">
+                <%# No inventory tag — Cureate doesn't track vendor inventory;
+                    vendors manage stock in their own systems. %>
+                <div class="flex items-center" style="margin-top:10px;">
                   <span class="text-[13px] font-black text-[#1f1f1f]">$<%= format("%.2f", product.wholesale_unit_price.to_f) %></span>
-                  <%
-                    inv = product.inventory.to_i
-                    inv_bg, inv_fg = if inv.zero?    then ["#fce8e8", "#991b1b"]
-                                     elsif inv < 50  then ["#fde8dc", "#a33500"]
-                                     else                 ["#f0f0f0", "#444955"]
-                                     end
-                  %>
-                  <span class="text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
-                        style="background:<%= inv_bg %>; color:<%= inv_fg %>;">
-                    <%= inv.zero? ? "Out of stock" : "#{number_with_delimiter(inv)} on hand" %>
-                  </span>
                 </div>
                 <%# No completeness meter here. The card shows the product; the "Add photo"
                     placeholder already says the one thing that matters, and the nudge card

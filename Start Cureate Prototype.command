@@ -50,6 +50,22 @@ fi
 echo "→ Node packages…"
 [ -x node_modules/.bin/esbuild ] && [ -x node_modules/.bin/tailwindcss ] || npm install
 
+# ── Stale server ────────────────────────────────────────────────────────────
+# A lingering server from a previous run keeps serving OLD code (models and
+# seeds load once at boot) and blocks the new boot with "A server is already
+# running". Stop it and clear the pid file before starting fresh.
+PIDFILE=tmp/pids/server.pid
+if [ -f "$PIDFILE" ]; then
+  OLDPID="$(cat "$PIDFILE" 2>/dev/null)"
+  if [ -n "$OLDPID" ] && kill -0 "$OLDPID" 2>/dev/null; then
+    echo "→ Stopping previous server (pid $OLDPID)…"
+    kill "$OLDPID" 2>/dev/null
+    for i in 1 2 3 4 5; do kill -0 "$OLDPID" 2>/dev/null || break; sleep 1; done
+    kill -9 "$OLDPID" 2>/dev/null || true
+  fi
+  rm -f "$PIDFILE"
+fi
+
 # ── Assets ──────────────────────────────────────────────────────────────────
 # Rebuild whenever views or Stimulus controllers change:
 #   JS  — esbuild bundles app/javascript/application.js → app/assets/builds/application.js

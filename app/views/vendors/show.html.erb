@@ -1,171 +1,392 @@
 <% content_for :title, "#{@vendor.name} — Cureate Connect" %>
-<% businesss_details = [
-  { label: "Business Type",          value: @vendor.business_type },
-  { label: "Revenue",                value: @vendor.revenue },
-  { label: "Employees",              value: @vendor.employees },
-  { label: "Insurance",              value: "General Liability, Workers' Comp" },
-  { label: "Health Dept. Clearance", value: "Yes" },
-  { label: "Certifications",         value: @vendor.certifications.any? ? @vendor.certifications.join(", ") : "—" },
-] %>
-<% businesss_details << { label: "Categories", value: @vendor.categories.join(", ") } if @vendor.categories&.any? %>
-<% businesss_details << { label: "Goal",       value: @vendor.goals.first } if @vendor.goals&.any? %>
+<%
+  # ── Public vendor page (sprint 2 banner round, pass 2) ──
+  # Design decisions (banner, overlapping identity card, colors, placement)
+  # come from the design mock; the SECTIONS AND CONTENT mirror the edit
+  # ("draft") view card-for-card: the same left rail cards and the same main
+  # column cards, rendered read-only. Sales channels the vendor has filled in
+  # appear with their details; empty channels don't appear at all. Everything
+  # reads from the in-memory Vendor the edit form saves to, so Save Profile
+  # publishes here immediately.
+  preview = vendor_persona? && current_vendor && current_vendor.id == @vendor.id
+  card    = "bg-white border border-[#e8e8e8] rounded-xl p-5"
+  ctitle  = "text-[11px] font-bold text-[#777] uppercase tracking-wide"
+  rlabel  = "text-[11px] font-bold text-[#999] uppercase tracking-wide mb-0.5"
+  rvalue  = "text-[14px] text-[#1f1f1f] leading-snug"
 
-<% logistics = [
-  { label: "Delivery & Shipping", value: "Shipping available nationwide" },
-  { label: "Delivery Schedule",   value: @vendor.delivery_schedule },
-  { label: "Min. Order Qty",      value: @vendor.min_order_quantity },
-  { label: "Production",          value: "Baltimore, MD" },
-  { label: "Seasonal Offerings",  value: "Seasonal offerings available" },
-  { label: "Growth Goals",        value: "Certified" },
-] %>
+  live_products = @vendor.products.reject(&:shipping_fee?).select(&:published?)
+
+  # ── Sales channels — mirrors the edit view's channel config ──
+  channel_meta = [
+    { key: "cpg",        name: "Consumer Packaged Goods",  short: "CPG",               ops: "GS1 barcodes" },
+    { key: "grab_go",    name: "Grab-and-Go Fresh Retail", short: "Grab & Go",         ops: "GS1 barcodes" },
+    { key: "boh",        name: "Back-of-House Products",   short: "Back-of-House",     ops: "Private labeling" },
+    { key: "catering",   name: "Catering & Pop-Up Events", short: "Catering & Events", ops: "Hot holding" },
+    { key: "gifting",    name: "Customization & Gifting",  short: "Gifting",           ops: "Private labeling" },
+    { key: "food_truck", name: "Food Truck or Cart",       short: "Food Truck",        ops: "Hot holding" },
+  ]
+  channel_data    = @vendor.channel_data.is_a?(Hash) ? @vendor.channel_data : {}
+  active_channels = channel_meta.select { |ch|
+    h = channel_data[ch[:key]]
+    h.is_a?(Hash) && h.values.any? { |v| v.is_a?(Array) ? v.any? : v.to_s.strip != "" }
+  }
+  # Field order + labels for the read-only channel rows.
+  channel_fields = [
+    ["total_moq",           "Total MOQ"],
+    ["lead_time",           "Lead time"],
+    ["production_planning", "Production planning"],
+    ["capacity",            "Capacity"],
+    ["fulfillment_method",  "Deliver / Ship"],
+    ["who_delivers",        "Who delivers"],
+    ["delivery_fee",        "Delivery fee"],
+    ["delivery_radius",     "Delivery radius"],
+    ["shipping_radius",     "Shipping radius"],
+    ["carriers",            "Carriers"],
+    ["booking_days",        "Booking days"],
+    ["ops",                 :ops],
+    ["temp_logs",           "Temp logs"],
+    ["certifications",      "Food safety"],
+    ["certifications_other","Other certifications"],
+  ]
+
+  # Identity badges lead; a certification only adds a pill when it isn't already
+  # covered by an identity flag (case-insensitive), so "Woman-Owned Business"
+  # never renders twice with different casings.
+  identity_pills = Array(@vendor.business_identity).dup
+  Array(@vendor.certifications).each do |c|
+    identity_pills << c unless identity_pills.any? { |i| i.casecmp?(c) }
+  end
+  channel_pills  = active_channels.map { |ch| ch[:short] }
+
+  socials    = @vendor.social_links.is_a?(Hash) ? @vendor.social_links : {}
+  social_row = %i[instagram tiktok facebook linkedin].filter_map { |k|
+    v = socials[k]
+    [k, v] if v.is_a?(String) && v.present?
+  }
+
+  day_chip = "inline-flex items-center h-[26px] px-[11px] rounded-full text-[12px] font-bold text-white"
+%>
 
 <div class="flex h-screen overflow-hidden font-['Lato']">
   <%= render "shared/sidebar" %>
 
-  <div class="flex-1 overflow-y-auto bg-white">
+  <div class="flex-1 overflow-y-auto bg-[#f7f5ef]">
 
-    <%# Breadcrumb — sticky so the cart stays visible while scrolling to the
-        product gallery at the bottom (T12) %>
-    <div class="sticky top-0 z-20 bg-white border-b border-[#e8e8e8]">
-      <div class="px-4 md:px-9 py-3 flex items-center justify-between gap-3">
-        <nav aria-label="Breadcrumb" class="min-w-0">
-          <ol class="flex items-center gap-2 text-[13px]">
-            <li>
-              <%= link_to vendors_path, class: "text-[#28ba93] font-bold hover:underline flex items-center gap-1 no-min-h" do %>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Vendors
-              <% end %>
-            </li>
-            <li class="text-[#ccc]">/</li>
-            <li class="text-[#1f1f1f] font-bold truncate"><%= @vendor.name %></li>
-          </ol>
-        </nav>
-        <%= render "shared/view_cart_button" %>
+    <% if preview %>
+      <%# ── Preview bar — vendor-only chrome, hidden from real buyers. Same bar
+          anatomy as the buyer breadcrumb bar (px-9 py-3, space-between), sidebar
+          ink for the preview context, and design-system pill + chevron. ── %>
+      <div class="sticky top-0 z-20 px-4 md:px-9 py-3 flex items-center justify-between gap-3 bg-[#1f1f1f]">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="inline-flex items-center h-[22px] px-2.5 rounded-full text-[10.5px] font-bold uppercase tracking-wide text-white shrink-0 bg-[#28ba93]">Preview</span>
+          <span class="text-[13px] text-white opacity-75 truncate">This is how buyers see your page.</span>
+        </div>
+        <%= link_to vendor_profile_path,
+              class: "no-min-h inline-flex items-center gap-1.5 h-[34px] px-4 rounded-full border border-[#28ba93] text-[#28ba93] text-[12px] font-bold whitespace-nowrap hover:bg-[#28ba93] hover:text-white transition-colors shrink-0" do %>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="shrink-0">
+            <path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Back to editing
+        <% end %>
       </div>
+    <% else %>
+      <%# ── Buyer chrome: breadcrumb + cart, sticky (T12) ── %>
+      <div class="sticky top-0 z-20 bg-white border-b border-[#e8e8e8]">
+        <div class="px-4 md:px-9 py-3 flex items-center justify-between gap-3">
+          <nav aria-label="Breadcrumb" class="min-w-0">
+            <ol class="flex items-center gap-2 text-[13px]">
+              <li>
+                <%= link_to vendors_path, class: "text-[#28ba93] font-bold hover:underline flex items-center gap-1 no-min-h" do %>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Vendors
+                <% end %>
+              </li>
+              <li class="text-[#ccc]">/</li>
+              <li class="text-[#1f1f1f] font-bold truncate"><%= @vendor.name %></li>
+            </ol>
+          </nav>
+          <%= render "shared/view_cart_button" %>
+        </div>
+      </div>
+    <% end %>
+
+    <%# ── Shop banner — full bleed, neutral fallback when unset ── %>
+    <div class="relative h-[240px] overflow-hidden" style="background-color:#e9e2d4;">
+      <% if @vendor.banner_image.present? %>
+        <img src="<%= @vendor.banner_image %>" alt="<%= @vendor.name %> shop banner" class="w-full h-full object-cover">
+      <% end %>
+      <div class="absolute inset-0 pointer-events-none" style="box-shadow: inset 0 -40px 60px -30px rgba(31,31,31,.35);"></div>
     </div>
 
-    <main class="px-4 md:px-9">
+    <main class="px-4 md:px-9 pb-10">
 
-      <%# Hero %>
-      <div class="pt-6 pb-6 border-b border-[#e8e8e8]">
-        <div class="flex items-start gap-4 md:gap-8">
-          <div class="w-[80px] h-[80px] md:w-[120px] md:h-[120px] rounded-xl border border-[#e8e8e8] overflow-hidden bg-white flex items-center justify-center shrink-0">
-            <img src="<%= @vendor.logo %>" alt="<%= @vendor.name %>" class="w-full h-full object-contain p-2">
-          </div>
-          <div class="flex-1 min-w-0 pt-1">
-            <p class="text-[11px] md:text-[12px] font-bold text-[#28ba93] uppercase tracking-[0.08em] mb-1"><%= @vendor.location %></p>
-            <h1 class="text-[26px] md:text-[34px] font-black text-[#1f1f1f] uppercase tracking-tight leading-tight mb-1"><%= @vendor.name %></h1>
-            <% if @vendor.owned %>
-              <p class="text-[13px] md:text-[14px] text-[#666] italic mb-3"><%= @vendor.owned %></p>
-            <% end %>
-            <div class="flex gap-2">
-              <% [
-                ["Instagram", "<rect x='2' y='2' width='12' height='12' rx='3' stroke='currentColor' stroke-width='1.3'/><circle cx='8' cy='8' r='2.5' stroke='currentColor' stroke-width='1.3'/><circle cx='11.2' cy='4.8' r='0.6' fill='currentColor'/>"],
-                ["Twitter",   "<path d='M2 2.5h4l2.5 3.5L11 2.5h1.5L9 7l4.5 6.5H9.5L7 10 4.5 13.5H3L6.5 8.5 2 2.5z' stroke='currentColor' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round'/>"],
-                ["Facebook",  "<path d='M9 2.5H10.5V1H9C7.34 1 6 2.34 6 4v1.5H4.5V7H6v7h1.5V7H9l.5-1.5H7.5V4c0-.83.67-1.5 1.5-1.5z' stroke='currentColor' stroke-width='1.1' stroke-linejoin='round'/>"],
-              ].each do |label, svg| %>
-                <a href="#" aria-label="<%= label %>" class="no-min-h w-9 h-9 rounded-full bg-[#f7f5ef] flex items-center justify-center text-[#777] hover:bg-[#e8e8e8] transition-colors">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><%= svg.html_safe %></svg>
-                </a>
+      <%# ── Identity card — overlaps the banner (mock's shop header treatment) ── %>
+      <div class="relative -mt-[58px] bg-white border border-[#e8e8e8] rounded-2xl px-6 md:px-8 pt-7 pb-6 shadow-[2px_2px_16px_0px_rgba(156,153,153,0.16)]">
+        <div class="flex flex-col md:flex-row items-start gap-7">
+          <% if @vendor.founder_photo.present? %>
+            <figure class="w-[150px] shrink-0 m-0">
+              <div class="w-[150px] h-[150px] rounded-xl overflow-hidden bg-[#f7f5ef]">
+                <img src="<%= @vendor.founder_photo %>" alt="Founder" class="w-full h-full object-cover">
+              </div>
+              <figcaption class="flex items-baseline flex-wrap gap-x-1.5 mt-2 text-[12px] leading-[1.4] text-[#777]">
+                <span class="font-bold text-[#1f1f1f]"><%= @vendor.owner_names.presence || @vendor.name %></span>
+                <span>Founder</span>
+              </figcaption>
+            </figure>
+          <% end %>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-5 mb-4">
+              <div class="w-[86px] h-[86px] shrink-0 border border-[#e8e8e8] rounded-xl bg-white flex items-center justify-center overflow-hidden">
+                <img src="<%= @vendor.logo %>" alt="<%= @vendor.name %> logo" class="w-full h-full object-contain p-2">
+              </div>
+              <div class="min-w-0">
+                <p class="text-[12px] font-bold text-[#28ba93] uppercase tracking-[.08em] mb-1"><%= @vendor.location %></p>
+                <h1 class="text-[28px] md:text-[38px] font-black uppercase tracking-[-.02em] leading-[1.02] text-[#1f1f1f]"><%= @vendor.name %></h1>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-5">
+              <% identity_pills.each do |pill| %>
+                <span class="inline-flex items-center h-[28px] px-3.5 rounded-full text-[12px] font-bold" style="background-color:#eaf7f3; border:1px solid #cdeee4; color:#0f7a63;"><%= pill %></span>
               <% end %>
+              <% channel_pills.each do |pill| %>
+                <span class="inline-flex items-center h-[28px] px-3.5 rounded-full text-[12px] font-bold bg-white border border-[#e8e8e8] text-[#555]"><%= pill %></span>
+              <% end %>
+            </div>
+            <div class="flex items-center gap-4 flex-wrap">
+              <% if @vendor.website.present? %>
+                <a href="<%= full_url(@vendor.website) %>" target="_blank" rel="noopener noreferrer"
+                   class="no-min-h text-[14px] font-bold text-[#28ba93]"><%= display_url(@vendor.website) %></a>
+              <% end %>
+              <% if @vendor.website.present? && social_row.any? %>
+                <span class="w-px h-[18px] bg-[#e8e8e8]"></span>
+              <% end %>
+              <div class="flex items-center gap-2.5">
+                <% social_row.each do |key, url| %>
+                  <a href="<%= url.start_with?("http") ? url : full_url(url) %>" target="_blank" rel="noopener noreferrer" aria-label="<%= key.to_s.capitalize %>"
+                     class="no-min-h w-[36px] h-[36px] rounded-full bg-[#f7f5ef] flex items-center justify-center hover:bg-[#e8e8e8] transition-colors">
+                    <img src="/icons/icon_<%= key %>.svg" alt="" class="w-4 h-4 opacity-60">
+                  </a>
+                <% end %>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <%# The Business %>
-      <section class="py-5 border-b border-[#e8e8e8]">
-        <h2 class="text-[18px] font-bold text-[#1f1f1f] mb-3">The Business</h2>
-        <p class="text-[15px] leading-[1.6] text-[#444955]"><%= @vendor.about %></p>
-      </section>
-
-      <%# Contact & Location %>
-      <section class="py-5 border-b border-[#e8e8e8]">
-        <h3 class="text-[13px] font-bold text-[#666] uppercase tracking-wide mb-4">Contact & Location</h3>
-        <div class="flex items-start gap-3 mb-3">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="text-[#999] shrink-0 block" style="margin-top: 2px">
-            <path d="M8 1.5a5 5 0 00-5 5c0 3.5 5 8 5 8s5-4.5 5-8a5 5 0 00-5-5z" stroke="currentColor" stroke-width="1.25"/>
-            <circle cx="8" cy="6.5" r="1.5" stroke="currentColor" stroke-width="1.25"/>
-          </svg>
-          <p class="text-[14px] text-[#1f1f1f] leading-snug"><%= @vendor.address %></p>
+      <%# ── Products — shop-front position, directly under the header ── %>
+      <section class="mt-9">
+        <div class="flex items-baseline justify-between mb-4">
+          <h2 class="text-[20px] font-black text-[#1f1f1f] uppercase tracking-[-.01em]">Products</h2>
+          <span class="text-[13px] text-[#999]"><%= live_products.size %> <%= "product".pluralize(live_products.size) %> live</span>
         </div>
-        <div class="flex items-center gap-3">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="text-[#999] shrink-0 block">
-            <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.25"/>
-            <path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12" stroke="currentColor" stroke-width="1.25"/>
-          </svg>
-          <a href="<%= full_url(@vendor.website) %>" target="_blank" rel="noopener noreferrer"
-             class="no-min-h text-[14px] text-[#28ba93] font-bold" style="line-height: 16px">
-            <%= display_url(@vendor.website) %>
-          </a>
-        </div>
-      </section>
-
-      <% if @vendor.story.present? %>
-        <section class="py-5 border-b border-[#e8e8e8]">
-          <h2 class="text-[18px] font-bold text-[#1f1f1f] mb-3">Our Story</h2>
-          <p class="text-[15px] leading-[1.6] text-[#444955]"><%= @vendor.story %></p>
-        </section>
-      <% end %>
-
-      <%# Business Details %>
-      <section class="py-5 border-b border-[#e8e8e8]">
-        <h3 class="text-[13px] font-bold text-[#666] uppercase tracking-wide mb-4">Business Details</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-          <% businesss_details.each do |row| %>
-            <% next if row[:value].blank? %>
-            <div>
-              <p class="text-[11px] font-bold text-[#999] uppercase tracking-wide mb-1"><%= row[:label] %></p>
-              <p class="text-[14px] text-[#1f1f1f]"><%= row[:value] %></p>
-            </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+          <% live_products.each do |product| %>
+            <%= render "shared/product_card", product: product, vendor: @vendor %>
           <% end %>
         </div>
       </section>
 
-      <%# Vendor Resources %>
-      <section class="py-5 border-b border-[#e8e8e8]">
-        <h2 class="text-[18px] font-bold text-[#1f1f1f] mb-2">Vendor Resources</h2>
-        <p class="text-[14px] text-[#666] leading-relaxed mb-4">Download promotional materials to feature this vendor in your marketplace or dining communications.</p>
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-          <% ["Small (5x3)", "Medium (4x6)", "Large (8.5x11)", "Digital Flyer", "Monitor Graphic"].each do |asset| %>
-            <a href="#" class="flex items-center gap-2 p-3 bg-white border border-[#e8e8e8] rounded-lg hover:bg-[#f7f5ef] transition-colors no-min-h">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="shrink-0 text-[#28ba93]">
-                <path d="M8 2v9m0 0l-3-3m3 3l3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <%# ── Two-column body — mirrors the draft view card-for-card:
+          the same rail cards on the left, the same main cards on the right. ── %>
+      <div class="flex flex-col md:flex-row items-start gap-6 mt-9">
+
+        <%# ════ Left rail — draft view's rail cards, read-only ════ %>
+        <div class="w-full md:w-[280px] shrink-0 flex flex-col gap-4">
+
+          <div class="<%= card %>">
+            <p class="<%= ctitle %> mb-3">Business HQ Location</p>
+            <div class="flex items-start gap-2.5">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="text-[#999] shrink-0 mt-0.5">
+                <path d="M8 1.5a5 5 0 00-5 5c0 3.5 5 8 5 8s5-4.5 5-8a5 5 0 00-5-5z" stroke="currentColor" stroke-width="1.25"/>
+                <circle cx="8" cy="6.5" r="1.5" stroke="currentColor" stroke-width="1.25"/>
               </svg>
-              <span class="text-[13px] font-bold text-[#1f1f1f] truncate"><%= asset %></span>
-            </a>
-          <% end %>
-        </div>
-      </section>
-
-      <%# Logistics %>
-      <section class="py-5 border-b border-[#e8e8e8]">
-        <h2 class="text-[18px] font-bold text-[#1f1f1f] mb-4">Logistics & Fulfillment</h2>
-        <% logistics.each_with_index do |row, i| %>
-          <div class="flex justify-between items-start gap-4 py-3 <%= 'border-b border-[#f0f0f0]' if i < logistics.length - 1 %>">
-            <p class="text-[12px] font-bold uppercase tracking-wide shrink-0 w-[38%] text-[#777]"><%= row[:label] %></p>
-            <p class="text-[14px] text-[#1f1f1f] text-right flex-1"><%= row[:value] %></p>
+              <p class="<%= rvalue %>"><%= @vendor.address %></p>
+            </div>
           </div>
-        <% end %>
-      </section>
 
-      <%# Products %>
-      <section class="pt-6 pb-8">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-[18px] md:text-[20px] font-black text-[#1f1f1f] uppercase tracking-tight">Products</h2>
-          <%= link_to "View all →", products_path(vendor: @vendor.id),
-              class: "text-[14px] font-bold text-[#28ba93] no-min-h hover:underline" %>
+          <%# ── Business details — mirrors the draft's combined card ── %>
+          <div class="<%= card %>">
+            <p class="<%= ctitle %> mb-4">Business Details</p>
+            <div class="flex flex-col gap-4">
+              <% [["Business Type", @vendor.business_type], ["Revenue", @vendor.revenue],
+                  ["Number of Employees", @vendor.employees]].each do |label, value| %>
+                <% next if value.blank? %>
+                <div>
+                  <p class="<%= rlabel %>"><%= label %></p>
+                  <p class="<%= rvalue %>"><%= value %></p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+
+          <%# ── Certifications & compliance — mirrors the draft's combined card ── %>
+          <div class="<%= card %>">
+            <p class="<%= ctitle %> mb-4">Certifications &amp; Compliance</p>
+            <div class="flex flex-col gap-4">
+              <% if Array(@vendor.certifications).any? %>
+                <div>
+                  <p class="<%= rlabel %>">Business Certification</p>
+                  <p class="<%= rvalue %>"><%= Array(@vendor.certifications).join(", ") %></p>
+                </div>
+              <% end %>
+              <% if Array(@vendor.insurance).any? %>
+                <div>
+                  <p class="<%= rlabel %>">Insurance</p>
+                  <p class="<%= rvalue %>"><%= Array(@vendor.insurance).join(", ") %></p>
+                </div>
+              <% end %>
+              <% if @vendor.health_clearance.present? %>
+                <div>
+                  <p class="<%= rlabel %>">Health Clearance</p>
+                  <p class="<%= rvalue %>"><%= @vendor.health_clearance == "Yes" ? "Cleared by state Health Department" : @vendor.health_clearance %></p>
+                </div>
+              <% end %>
+            </div>
+          </div>
         </div>
-        <div class="flex gap-3 md:gap-4 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory -mr-4 md:mr-0 pr-4 md:pr-0">
-          <% @products.each do |product| %>
-            <div class="shrink-0 w-[160px] md:w-[200px] snap-start">
-              <%= render "shared/product_card", product: product, vendor: @vendor %>
+
+        <%# ════ Main column — draft view's main cards, read-only ════ %>
+        <div class="flex-1 min-w-0 flex flex-col gap-4">
+
+          <%# ── About ── %>
+          <div class="<%= card %>">
+            <p class="<%= ctitle %> mb-4">About</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <% if @vendor.owner_names.present? %>
+                <div>
+                  <p class="<%= rlabel %>">Business Owner Name(s)</p>
+                  <p class="<%= rvalue %>"><%= @vendor.owner_names %></p>
+                </div>
+              <% end %>
+              <% if @vendor.website.present? %>
+                <div>
+                  <p class="<%= rlabel %>">Website</p>
+                  <a href="<%= full_url(@vendor.website) %>" target="_blank" rel="noopener noreferrer"
+                     class="no-min-h text-[14px] font-bold text-[#28ba93]"><%= display_url(@vendor.website) %></a>
+                </div>
+              <% end %>
+              <% if @vendor.phone.present? %>
+                <div>
+                  <p class="<%= rlabel %>">Phone</p>
+                  <p class="<%= rvalue %>"><%= @vendor.phone %></p>
+                </div>
+              <% end %>
+              <% if @vendor.email.present? %>
+                <div>
+                  <p class="<%= rlabel %>">Business Email</p>
+                  <p class="<%= rvalue %>"><%= @vendor.email %></p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+
+          <%# ── Your Business ── %>
+          <div class="<%= card %>">
+            <p class="<%= ctitle %> mb-4">Your Business</p>
+            <h2 class="text-[17px] font-bold text-[#1f1f1f] mb-2">The Business</h2>
+            <p class="text-[15px] leading-[1.6] text-[#444955]" style="text-wrap:pretty;"><%= @vendor.about %></p>
+            <% if @vendor.story.present? %>
+              <h2 class="text-[17px] font-bold text-[#1f1f1f] mt-5 mb-2">Our Story</h2>
+              <p class="text-[15px] leading-[1.6] text-[#444955]" style="text-wrap:pretty;"><%= @vendor.story %></p>
+            <% end %>
+            <% if @vendor.production.present? %>
+              <div class="mt-5">
+                <p class="<%= rlabel %>">Production</p>
+                <p class="<%= rvalue %>"><%= @vendor.production %></p>
+              </div>
+            <% end %>
+          </div>
+
+          <%# ── Logistics & Fulfillment ── %>
+          <div class="<%= card %>">
+            <p class="<%= ctitle %> mb-4">Logistics &amp; Fulfillment</p>
+            <div class="flex flex-col gap-4">
+              <% if Array(@vendor.delivery_days).any? %>
+                <div>
+                  <p class="<%= rlabel %> mb-1.5">Delivery Days</p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <% Array(@vendor.delivery_days).each do |d| %>
+                      <span class="<%= day_chip %>" style="background-color:#035257;"><%= d %></span>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+              <% if Array(@vendor.shipping_days).any? %>
+                <div>
+                  <p class="<%= rlabel %> mb-1.5">Shipping Days</p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <% Array(@vendor.shipping_days).each do |d| %>
+                      <span class="<%= day_chip %>" style="background-color:#035257;"><%= d %></span>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+              <%# Min. Order Qty intentionally absent — MOQ is entered per sales
+                  channel in the draft state and renders in the channel blocks. %>
+              <% if @vendor.seasonal_offerings.present? %>
+                <div>
+                  <p class="<%= rlabel %>">Seasonal Offerings</p>
+                  <p class="<%= rvalue %>"><%= @vendor.seasonal_offerings %></p>
+                </div>
+              <% end %>
+              <% if @vendor.marketing_opportunities == "Yes" %>
+                <div>
+                  <p class="<%= rlabel %>">Marketing Opportunities</p>
+                  <p class="<%= rvalue %>"><%= @vendor.marketing_opportunities_details.presence || "Yes — demos, pop-ups, or samples available" %></p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+          <%# ── Sales Channels — only channels the vendor filled in ── %>
+          <% if active_channels.any? %>
+            <div class="<%= card %>">
+              <p class="<%= ctitle %> mb-4">Sales Channels</p>
+              <% active_channels.each_with_index do |ch, ci| %>
+                <% data = channel_data[ch[:key]] %>
+                <%# Structured MOQ (threshold + measure + optional label) renders
+                    as one "Total MOQ" row: the buyer-facing label wins, else a
+                    plain "36 units" synthesis. Legacy free-text total_moq still
+                    displays for unmigrated data. %>
+                <%
+                  if data.is_a?(Hash) && (data["moq_threshold"].to_s.strip != "" || data["moq_label"].to_s.strip != "")
+                    data = data.dup
+                    measure = data["moq_measure"].to_s.sub(/\s*\(\$\)\s*\z/, "").downcase
+                    measure = "units" if measure.empty?
+                    data["total_moq"] = data["moq_label"].to_s.strip.empty? ? "#{data["moq_threshold"]} #{measure}" : data["moq_label"]
+                  end
+                %>
+                <div class="<%= 'mt-5 pt-5 border-t border-[#f0f0f0]' if ci.positive? %>">
+                  <div class="flex items-center gap-2.5 mb-3">
+                    <h3 class="text-[15px] font-bold text-[#1f1f1f]"><%= ch[:name] %></h3>
+                    <span class="inline-flex items-center h-[20px] px-2 rounded-full text-[10px] font-bold uppercase tracking-wide" style="background-color:#eaf7f3; color:#0f7a63;">Active</span>
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                    <% channel_fields.each do |field, label| %>
+                      <% value = data[field] %>
+                      <% next if value.blank? || (value.is_a?(Array) && value.empty?) %>
+                      <div>
+                        <p class="<%= rlabel %>"><%= label == :ops ? ch[:ops] : label %></p>
+                        <% if field == "booking_days" %>
+                          <div class="flex flex-wrap gap-1.5 mt-1">
+                            <% Array(value).each do |d| %>
+                              <span class="<%= day_chip %>" style="background-color:#035257;"><%= d %></span>
+                            <% end %>
+                          </div>
+                        <% else %>
+                          <p class="<%= rvalue %>"><%= value.is_a?(Array) ? value.join(", ") : value %></p>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
             </div>
           <% end %>
+
         </div>
-      </section>
+      </div>
 
     </main>
   </div>

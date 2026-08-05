@@ -21,7 +21,9 @@
         <img src="/cureate-logo.svg" alt="Cureate Connect" class="h-[32px] w-auto">
       <% end %>
 
-      <% if request.path.start_with?("/purchase-orders") %>
+      <%# No cart in the vendor experience — the cart paradigm there is the edit
+          drawer (products / sales channels), not buyer ordering. %>
+      <% if request.path.start_with?("/purchase-orders") || vendor_persona? %>
         <div class="w-8 shrink-0"></div>
       <% else %>
         <button data-action="click->mobile-nav#openCart"
