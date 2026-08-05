@@ -31,6 +31,8 @@
   section = "bg-white border border-[#e8e8e8] rounded-xl p-4"
   label   = "text-[11px] font-bold text-[#777] uppercase tracking-wide"
   field   = "w-full h-[38px] rounded-lg border border-[#a1a4aa] px-3 text-[13px] text-[#444955] bg-white outline-none focus:border-[#28ba93] transition-colors"
+  # Shared dropdown component — same token as My Profile (.select-chevron custom arrow)
+  sel     = "#{field.sub('px-3', 'pl-3')} select-chevron cursor-pointer"
 %>
 
 <%# Backdrop %>
@@ -166,13 +168,10 @@
             <div>
               <p class="text-[11px] text-[#777] mb-1">Category</p>
               <%= select_tag :category, options_for_select(categories, product&.category),
-                    class: "#{field} cursor-pointer appearance-none" %>
-            </div>
-            <div>
-              <p class="text-[11px] text-[#777] mb-1">Inventory on hand (units)</p>
-              <%= number_field_tag :inventory, product&.inventory.to_i, min: 0, class: field %>
+                    class: sel %>
             </div>
           </div>
+          <%# Inventory field removed — Cureate doesn't track vendor inventory. %>
 
           <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px;">
             <div>
