@@ -41,7 +41,7 @@ twobetties = Vendor.new(
   production: "Our production kitchen is in Locust Point, Baltimore.",
   shipping_days: %w[Tue],
   business_identity: ["Woman-Owned Business"],
-  personal_identity: [],
+  personal_identity: ["White"],
   marketing_opportunities: "Yes",
   marketing_opportunities_details: "We offer in-store sampling demos and host quarterly pop-ups at partner " \
                                    "campuses — two weeks notice preferred.",
